@@ -7,6 +7,8 @@ const username = encodeURIComponent(credentials.admin.user);
 const password = encodeURIComponent(credentials.admin.pwd);
 const mogodb_url = credentials.mongodb_url;
 
+const dev = true;
+
 const url = `mongodb://${username}:${password}@${mogodb_url}`;
 
 async function testConnection() {
@@ -66,6 +68,9 @@ async function mongoInsert(collectionName, dataRows) {
 async function mongoQuery(collectionName, query = {}, limit = 0) {
   const client = new MongoClient(url, { useNewUrlParser: true, useUnifiedTopology: true });
   try {
+      if (collectionName === 'clickstream' && dev) {
+          limit = 1000;
+      }
       await client.connect();
       const collection = client.db(dbName).collection(collectionName);
       const result = await collection.find(query).limit(limit).toArray();
