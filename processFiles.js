@@ -79,7 +79,7 @@ async function processMetadataFiles(files) {
           fileMap[shortName] = file['value'];
       }
 
-      let requiredFiles = ['student_courseenrollment-prod-analytics', 'auth_user-prod-analytics',
+      let requiredFiles = ['student_courseenrollment-prod-analytics', 
           'certificates_generatedcertificate-prod-analytics', 'auth_userprofile-prod-analytics',
           'prod'];
 
@@ -101,7 +101,10 @@ async function processMetadataFiles(files) {
 
         let certificateValues = processCertificates(fileMap['certificates_generatedcertificate-prod-analytics'], enrollmentValues, courseMetadataMap);
 
+        let learnerAuthMap = {};
+        if ('auth_user-prod-analytics' in fileMap) {
         let learnerAuthMap = processAuthMap(fileMap['auth_user-prod-analytics'], enrollmentValues);
+        } 
 
         let groupMap = {};
         if ('course_groups_cohortmembership-prod-analytics' in fileMap) {
@@ -425,10 +428,10 @@ function processEnrollment(courseId, inputFile, courseMetadataMap){
       if (record.length < 2) {continue}
       let active = record[4];
       if (active === '0') {continue}
-      let globalLearnerId = record[1],
-          time = new Date(record[3]),
+      let globalLearnerId = record[0],
+          time = new Date(record[2]),
           courseLearnerId = courseId + '_' + globalLearnerId,
-          mode = record[5];
+          mode = record[4];
       if (compareDatetime(courseMetadataMap['end_time'], time) === 1) {
           enrolledLearnerSet.add(globalLearnerId);
           let array = [globalLearnerId, courseId, courseLearnerId];
@@ -461,7 +464,6 @@ function processCertificates(inputFile, enrollmentValues, courseMetadataMap) {
       certifiedLearners = 0,
       courseLearnerRecord = [];
 
-  // let radioValue = $("input[name='metaOptions']:checked").val();
   let radioValue = config.metaOptions;
   if (radioValue === undefined){radioValue = 'allStudents'};
 
@@ -469,15 +471,16 @@ function processCertificates(inputFile, enrollmentValues, courseMetadataMap) {
 
   for (let line of inputFile.split('\n')) {
       let record = line.split('\t');
-      if (record.length < 10) { continue; }
-      let global_learner_id = record[1],
-          final_grade = record[3],
-          certificate_status = record[7];
+      if (record.length < 7) { continue; }
+      let global_learner_id = record[0],
+          final_grade = record[1],
+          certificate_status = record[3];
       if (global_learner_id in enrollmentValues.courseLearnerMap) {
           certificateMap[global_learner_id] = {'final_grade': final_grade,
               'certificate_status': certificate_status}
       }
   }
+
   if (radioValue) {
       if (radioValue === 'completed') {
           for (let global_learner_id in certificateMap) {
@@ -580,18 +583,21 @@ function processGroups(courseId, inputFile, enrollmentValues){
  */
 function processDemographics(courseId, inputFile, enrollmentValues, learnerAuthMap) {
   let learnerDemographicRecord = [];
+  // hash_id	language	gender	year_of_birth	level_of_education	goals	country
   for (let line of inputFile.split('\n')) {
       let record = line.split('\t');
-      if (record.length < 10) { continue; }
-      let global_learner_id = record[1],
-          gender = record[7],
-          year_of_birth = record[9],
-          level_of_education = record[10],
-          country = record[13],
+      if (record.length < 5) { continue; }
+      let global_learner_id = record[0],
+          gender = record[2],
+          year_of_birth = record[3],
+          level_of_education = record[4],
+          country = record[6],
           course_learner_id = courseId + '_' + global_learner_id;
       if (enrollmentValues.enrolledLearnerSet.has(global_learner_id)) {
-          let array = [course_learner_id, gender, year_of_birth, level_of_education, country,
-              learnerAuthMap[global_learner_id]['mail'], enrollmentValues.learnerSegmentMap[global_learner_id]];
+        let learner_mail = '';
+        if (global_learner_id in learnerAuthMap) { learner_mail = learnerAuthMap[global_learner_id]['mail'];}
+        let array = [course_learner_id, gender, year_of_birth, level_of_education, country,
+              learner_mail, enrollmentValues.learnerSegmentMap[global_learner_id]];
           learnerDemographicRecord.push(array);
       }
   }
@@ -628,7 +634,7 @@ function processForumPostingInteraction(forum_file, courseMetadataMap){
       }
 
       let post_content = '"' + jsonObject["body"] + '"';
-      let post_timestamp = new Date(jsonObject["created_at"]["$date"]);
+      let post_timestamp = new Date(jsonObject["created_at"]);
 
       let post_parent_id = "";
       if (jsonObject.hasOwnProperty("parent_id")) {

@@ -69,7 +69,7 @@ async function mongoQuery(collectionName, query = {}, limit = 0) {
   const client = new MongoClient(url, { useNewUrlParser: true, useUnifiedTopology: true });
   try {
       if (collectionName === 'clickstream' && dev) {
-          limit = 1000;
+          limit = 10000;
       }
       await client.connect();
       const collection = client.db(dbName).collection(collectionName);
