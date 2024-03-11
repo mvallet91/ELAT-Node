@@ -1,15 +1,16 @@
-const { MongoClient } = require('mongodb');
-const credentials = require('./credentials');
+const { MongoClient } = require("mongodb");
+const credentials = require("./credentials");
 
 // Database Name
-const dbName = 'edx_test';
+const dbName = "edx_test";
 const username = encodeURIComponent(credentials.admin.user);
 const password = encodeURIComponent(credentials.admin.pwd);
 const mogodb_url = credentials.mongodb_url;
 
 const dev = true;
 
-const url = `mongodb://${username}:${password}@${mogodb_url}`;
+const url = `mongodb://${mogodb_url}`;
+// const url = `mongodb://${username}:${password}@${mogodb_url}`;
 
 async function testConnection() {
   const client = new MongoClient(url);
@@ -18,14 +19,16 @@ async function testConnection() {
     console.log("Connected successfully to the MongoDB server!");
     const db = client.db(dbName);
     const collections = await db.collections();
-    console.log("Collections in the database:", collections.map(c => c.collectionName));
+    console.log(
+      "Collections in the database:",
+      collections.map((c) => c.collectionName),
+    );
   } catch (err) {
     console.error("Connection failed:", err);
   } finally {
     await client.close();
   }
 }
-
 
 async function mongoInsert(collectionName, dataRows) {
   const client = new MongoClient(url);
@@ -42,53 +45,73 @@ async function mongoInsert(collectionName, dataRows) {
     // Process the dataRows as needed (e.g., handling date fields)
     for (let v of dataRows) {
       for (let field of Object.keys(v)) {
-        if (field.includes('time')) {
+        if (field.includes("time")) {
           let date = v[field];
           v[field] = new Date(date);
         }
       }
     }
     const result = await collection.insertMany(dataRows);
-    let info = '';
-    if (collectionName === 'webdata' || collectionName === 'metadata') {info = dataRows[0]['name']} else {info = dataRows.length}
-    if (dataRows.length > 0 ) {
-        let today = new Date();
-        let time = today.getHours() + ":" + today.getMinutes() + ":" + today.getSeconds() + '.' + today.getMilliseconds();
-        console.log('Successfully added', info, 'to' , collectionName, ' at ', time);
+    let info = "";
+    if (collectionName === "webdata" || collectionName === "metadata") {
+      info = dataRows[0]["name"];
+    } else {
+      info = dataRows.length;
+    }
+    if (dataRows.length > 0) {
+      let today = new Date();
+      let time =
+        today.getHours() +
+        ":" +
+        today.getMinutes() +
+        ":" +
+        today.getSeconds() +
+        "." +
+        today.getMilliseconds();
+      console.log(
+        "Successfully added",
+        info,
+        "to",
+        collectionName,
+        " at ",
+        time,
+      );
     }
   } catch (err) {
     console.error(err);
-  } 
-  finally {
+  } finally {
     await client.close();
   }
 }
 
-
 async function mongoQuery(collectionName, query = {}, limit = 0) {
-  const client = new MongoClient(url, { useNewUrlParser: true, useUnifiedTopology: true });
+  const client = new MongoClient(url, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  });
   try {
-      if (collectionName === 'clickstream' && dev) {
-          limit = 10000;
-      }
-      await client.connect();
-      const collection = client.db(dbName).collection(collectionName);
-      const result = await collection.find(query).limit(limit).toArray();
-      return result;
+    if (collectionName === "clickstream" && dev) {
+      limit = 10000;
+    }
+    await client.connect();
+    const collection = client.db(dbName).collection(collectionName);
+    const result = await collection.find(query).limit(limit).toArray();
+    return result;
   } catch (err) {
-      console.error('An error occurred while querying MongoDB:', err);
+    console.error("An error occurred while querying MongoDB:", err);
   } finally {
-      await client.close();
+    await client.close();
   }
 }
-
 
 async function deleteIfExists(collectionName) {
   const client = new MongoClient(url);
   try {
     await client.connect();
     const db = client.db(dbName);
-    const collections = await db.listCollections({ name: collectionName }).toArray();
+    const collections = await db
+      .listCollections({ name: collectionName })
+      .toArray();
     if (collections.length > 0) {
       await db.collection(collectionName).drop();
       console.log(`Dropped existing collection: ${collectionName}`);
@@ -96,10 +119,13 @@ async function deleteIfExists(collectionName) {
       console.log(`Collection ${collectionName} does not exist.`);
     }
   } catch (err) {
-    console.error(`An error occurred while checking/deleting collection ${collectionName}:`, err);
+    console.error(
+      `An error occurred while checking/deleting collection ${collectionName}:`,
+      err,
+    );
   } finally {
     await client.close();
   }
 }
 
-module.exports = {testConnection, mongoInsert, mongoQuery, deleteIfExists};
+module.exports = { testConnection, mongoInsert, mongoQuery, deleteIfExists };
