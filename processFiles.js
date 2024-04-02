@@ -92,9 +92,8 @@ async function processMetadataFiles(files, courseRunName) {
         return x in fileMap;
       })
     ) {
-      console.log("Some files are missing");
+      console.warn("Some files are missing");
     } else {
-      console.log("All files are present");
       let courseElementRecord = [];
       for (let elementId in courseMetadataMap["element_time_map"]) {
         let element_start_time = new Date(
@@ -111,11 +110,6 @@ async function processMetadataFiles(files, courseRunName) {
         ];
         courseElementRecord.push(array);
       }
-      console.log(
-        "Finished processing " +
-          courseElementRecord.length +
-          " course components in metadata map",
-      );
 
       let enrollmentValues = processEnrollment(
         courseId,
@@ -160,11 +154,7 @@ async function processMetadataFiles(files, courseRunName) {
 
       let forumInteractionRecords = [];
 
-      console.log("All metadata ready");
-
-      if (courseRecord.length === 0) {
-        console.log("No courses info");
-      } else {
+      if (courseRecord.length > 0) {
         let rows = [];
         for (let array of courseRecord) {
           let course_id = courseMetadataMap["course_id"];
@@ -182,9 +172,7 @@ async function processMetadataFiles(files, courseRunName) {
         await mongoInsert("courses", rows);
       }
 
-      if (courseElementRecord.length === 0) {
-        console.log("No course element info");
-      } else {
+      if (courseElementRecord.length > 0) {
         let data = [];
         for (let array of courseElementRecord) {
           let element_id = array[0];
@@ -202,9 +190,7 @@ async function processMetadataFiles(files, courseRunName) {
         await mongoInsert("course_elements", data);
       }
 
-      if (enrollmentValues.learnerIndexRecord.length === 0) {
-        console.log("no learner index info");
-      } else {
+      if (enrollmentValues.learnerIndexRecord.length > 0) {
         let data = [];
         for (let array of enrollmentValues.learnerIndexRecord) {
           let global_learner_id = array[0];
@@ -220,9 +206,7 @@ async function processMetadataFiles(files, courseRunName) {
         await mongoInsert("learner_index", data);
       }
 
-      if (certificateValues.courseLearnerRecord.length === 0) {
-        console.log("no enrolled students info");
-      } else {
+      if (certificateValues.courseLearnerRecord.length > 0) {
         let data = [];
         for (let array of certificateValues.courseLearnerRecord) {
           let course_learner_id = array[0],
@@ -250,9 +234,7 @@ async function processMetadataFiles(files, courseRunName) {
         await mongoInsert("course_learner", data);
       }
 
-      if (demographicValues.learnerDemographicRecord.length === 0) {
-        console.log("no learner demographic info");
-      } else {
+      if (demographicValues.learnerDemographicRecord.length > 0) {
         let data = [];
         for (let array of demographicValues.learnerDemographicRecord) {
           let course_learner_id = processNull(array[0]),
@@ -277,9 +259,7 @@ async function processMetadataFiles(files, courseRunName) {
         await mongoInsert("learner_demographic", data);
       }
 
-      if (forumInteractionRecords.length === 0) {
-        console.log("no forum interaction records");
-      } else {
+      if (forumInteractionRecords.length > 0) {
         let data = [];
         for (let array of forumInteractionRecords) {
           let post_id = processNull(array[0]),
@@ -355,7 +335,7 @@ function ExtractCourseInformation(files) {
     let fileName = file["key"];
     if (!fileName.includes("course_structure")) {
       if (i === files.length) {
-        console.log("Course structure file is missing!");
+        console.warn("Course structure file is missing!");
         return courseMetadataMap;
       }
     } else {
@@ -475,9 +455,7 @@ function ExtractCourseInformation(files) {
       courseMetadataMap["block_type_map"] = block_type_map;
       courseMetadataMap["order_map"] = order_map;
       courseMetadataMap["element_name_map"] = element_name_map;
-      console.log(
-        "Metadata map ready for course run: " + courseMetadataMap["course_id"],
-      );
+
       return courseMetadataMap;
     }
   }

@@ -39,9 +39,6 @@ async function processGeneralSessions(courseRunName, logFiles) {
   let sessionRecord = [];
 
   for (let i = 0; i < logFiles.length; i++) {
-    console.log(
-      `Processing general session file ${i + 1} out of ${logFiles.length} for ${courseRunName}`,
-    );
     const logFile = logFiles[i];
     learnerAllEventLogs = JSON.parse(
       JSON.stringify(updatedLearnerAllEventLogs),
@@ -205,8 +202,6 @@ async function processGeneralSessions(courseRunName, logFiles) {
         data.push(values);
       }
       await mongoInsert("sessions", data);
-    } else {
-      console.log("no session info");
     }
   }
 }
@@ -227,7 +222,6 @@ async function processVideoInteractionSessions(courseRunName, logFiles) {
       courseId.lastIndexOf("+") + 7,
     );
 
-  console.log("Starting video session processing");
   let currentDate = new Date(courseMetadataMap["start_date"]);
 
   const videoEventTypes = [
@@ -260,9 +254,6 @@ async function processVideoInteractionSessions(courseRunName, logFiles) {
     courseLearnerIdSet = new Set();
 
   for (let i = 0; i < logFiles.length; i++) {
-    console.log(
-      `Processing video interaction session file ${i + 1} out of ${logFiles.length} for ${courseRunName}`,
-    );
     const logFile = logFiles[i];
     for await (const line of readLines(logFile)) {
       if (line.length < 10 || !line.includes(currentCourseId)) {
@@ -691,10 +682,8 @@ async function processVideoInteractionSessions(courseRunName, logFiles) {
       };
       data.push(values);
     }
-    console.log("Sending", data.length, " values to storage at " + new Date());
     await mongoInsert("video_interactions", data);
   }
-  console.log("No video interaction data");
 }
 
 /**
@@ -714,16 +703,11 @@ async function processAssessmentsSubmissions(courseRunName, logFiles) {
     courseId.lastIndexOf("+") + 7,
   );
 
-  console.log("Starting quiz processing");
-
   let submissionEventCollection = ["problem_check"];
 
   const submissionData = [],
     assessmentData = [];
   for (let i = 0; i < logFiles.length; i++) {
-    console.log(
-      `Processing assessment and submission file ${i + 1} out of ${logFiles.length} for ${courseRunName}`,
-    );
     const logFile = logFiles[i];
     for await (const line of readLines(logFile)) {
       let jsonObject = JSON.parse(line);
@@ -774,14 +758,10 @@ async function processAssessmentsSubmissions(courseRunName, logFiles) {
     }
   }
 
-  if (assessmentData.length === 0) {
-    console.log("No assessment data");
-  } else {
+  if (assessmentData.length > 0) {
     await mongoInsert("assessments", assessmentData);
   }
-  if (submissionData.length === 0) {
-    console.log("No submission data");
-  } else {
+  if (submissionData.length > 0) {
     await mongoInsert("submissions", submissionData);
   }
 }
@@ -808,9 +788,6 @@ async function processQuizSessions(courseRunName, logFiles) {
     quizSessions = {};
 
   for (let i = 0; i < logFiles.length; i++) {
-    console.log(
-      `Processing quiz session file ${i + 1} out of ${logFiles.length} for ${courseRunName}`,
-    );
     const logFile = logFiles[i];
 
     (learnerAllEventLogs = {}),
@@ -1114,9 +1091,7 @@ async function processQuizSessions(courseRunName, logFiles) {
       }
     }
   }
-  if (quizSessionRecord.length === 0) {
-    console.log("No quiz session data");
-  } else {
+  if (quizSessionRecord.length > 0) {
     let data = [];
     for (let array of quizSessionRecord) {
       let sessionId = array[0];
@@ -1139,11 +1114,6 @@ async function processQuizSessions(courseRunName, logFiles) {
       };
       data.push(values);
     }
-    console.log(
-      "Sending",
-      quizSessionRecord.length,
-      " values to storage at " + new Date(),
-    );
     await mongoInsert("quiz_sessions", data);
   }
 }
@@ -1200,9 +1170,6 @@ async function processORASessions(courseRunName, logFiles) {
     oraSessionsRecord = [];
 
   for (let i = 0; i < logFiles.length; i++) {
-    console.log(
-      `Processing quiz session file ${i + 1} out of ${logFiles.length} for ${courseRunName}`,
-    );
     const logFile = logFiles[i];
     learnerAllEventLogs = {};
     learnerAllEventLogs = updatedLearnerAllEventLogs;
@@ -1442,10 +1409,7 @@ async function processORASessions(courseRunName, logFiles) {
       }
     }
   }
-  if (oraSessionsRecord.length === 0) {
-    console.log("no ORA session info", index, total);
-  } else {
-    let data = [];
+  if (oraSessionsRecord.length > 0) {
     for (let array of oraSessionsRecord) {
       let sessionId = array[0];
       const courseLearnerId = array[1],
@@ -1471,7 +1435,6 @@ async function processORASessions(courseRunName, logFiles) {
       };
       data.push(values);
     }
-    console.log("Sending ORA sessions to storage at " + new Date());
     mongoInsert("ora_sessions", data);
   }
 }
