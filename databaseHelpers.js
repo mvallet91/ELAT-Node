@@ -68,14 +68,6 @@ async function mongoInsert(collectionName, dataRows) {
         today.getSeconds() +
         "." +
         today.getMilliseconds();
-      console.log(
-        "Successfully added",
-        info,
-        "to",
-        collectionName,
-        " at ",
-        time,
-      );
     }
   } catch (err) {
     console.error(err);
@@ -163,7 +155,7 @@ async function clearSessionsCollections() {
         await db.collection(collection.collectionName).drop();
       }
     }
-    console.log("Cleared sessions collections");
+    console.log("Cleared sessions collections\n");
   } catch (err) {
     console.error(
       "An error occurred while clearing the sessions collections:",

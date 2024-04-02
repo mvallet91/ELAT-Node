@@ -21,8 +21,9 @@ async function* readLines(logFile) {
  * process their values, like start, end and duration, and finally store them in the database
  * @param {string} courseRunName - The name of the course run
  * @param {string[]} logFiles - The list of log files to process
+ * @param {cliProgress.SingleBar} bar - The progress bar
  */
-async function processGeneralSessions(courseRunName, logFiles) {
+async function processGeneralSessions(courseRunName, logFiles, bar) {
   let courseMetadataMap = await mongoQuery("metadata", {
     name: courseRunName,
   });
@@ -203,14 +204,18 @@ async function processGeneralSessions(courseRunName, logFiles) {
       }
       await mongoInsert("sessions", data);
     }
+    bar.increment();
   }
 }
 
 /**
  * This function will read the records in the logfile and extract all interactions from students with the forums,
  * process their values, like duration and times they search, to finally store them in the database
+ * @param {string} courseRunName - The name of the course run
+ * @param {Array} logFiles - The list of log files
+ * @param {cliProgress.SingleBar} bar - The progress bar
  */
-async function processVideoInteractionSessions(courseRunName, logFiles) {
+async function processVideoInteractionSessions(courseRunName, logFiles, bar) {
   let courseMetadataMap = await mongoQuery("metadata", {
     name: courseRunName,
   });
@@ -589,6 +594,7 @@ async function processVideoInteractionSessions(courseRunName, logFiles) {
         }
       }
     }
+    bar.increment();
   }
 
   let videoInteractionRecord = [];
@@ -689,8 +695,11 @@ async function processVideoInteractionSessions(courseRunName, logFiles) {
 /**
  * This function will read the records in the log database and extract the submissions and (automatic) assessments
  * of quiz questions, process their values, like timestamp or grade, to finally store them in the database
+ * @param {string} courseRunName - The name of the course run
+ * @param {string[]} logFiles - The list of log files
+ * @param {cliProgress.SingleBar} bar - The progress bar
  */
-async function processAssessmentsSubmissions(courseRunName, logFiles) {
+async function processAssessmentsSubmissions(courseRunName, logFiles, bar) {
   let courseMetadataMap = await mongoQuery("metadata", {
     name: courseRunName,
   });
@@ -756,6 +765,7 @@ async function processAssessmentsSubmissions(courseRunName, logFiles) {
         }
       }
     }
+    bar.increment();
   }
 
   if (assessmentData.length > 0) {
@@ -769,8 +779,11 @@ async function processAssessmentsSubmissions(courseRunName, logFiles) {
 /**
  * This function will read the records in the logfile and extract the submissions and (automatic) assessments
  * of quiz questions, process their values, like timestamp or grade, to finally store them in the database
+ * @param {string} courseRunName - The name of the course run
+ * @param {string[]} logFiles - The list of log files
+ * @param {cliProgress.SingleBar} bar - The progress bar
  */
-async function processQuizSessions(courseRunName, logFiles) {
+async function processQuizSessions(courseRunName, logFiles, bar) {
   let courseMetadataMap = await mongoQuery("metadata", {
     name: courseRunName,
   });
@@ -992,6 +1005,7 @@ async function processQuizSessions(courseRunName, logFiles) {
         updatedLearnerAllEventLogs[courseLearnerId] = newLogs;
       }
     }
+    bar.increment();
   }
 
   for (let sessionId in quizSessions) {
@@ -1149,7 +1163,13 @@ function getORAEventTypeAndElement(fullEvent) {
   return oraInfo;
 }
 
-async function processORASessions(courseRunName, logFiles) {
+/**
+ *
+ * @param {string} courseRunName The name of the course run
+ * @param {string[]} logFiles The log files to be processed
+ * @param {cliProgress.SingleBar} bar The progress bar
+ */
+async function processORASessions(courseRunName, logFiles, bar) {
   let courseMetadataMap = await mongoQuery("metadata", {
     name: courseRunName,
   });
@@ -1408,6 +1428,7 @@ async function processORASessions(courseRunName, logFiles) {
         oraEvents[courseLearnerId] = learnerOraEvents;
       }
     }
+    bar.increment();
   }
   if (oraSessionsRecord.length > 0) {
     for (let array of oraSessionsRecord) {

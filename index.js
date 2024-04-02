@@ -15,12 +15,15 @@ const {
 const fs = require("fs");
 const path = require("path");
 
+const cliProgress = require("cli-progress");
+
 /**
  * Function that identifies the log files for each course run
  * @param {string} directoryPath The path to the directory containing the course run directories
+ * @param {string[]} courses The course names to look for
  * @returns {Object} An object with course run directory names as keys and an array of log file paths as values
  */
-async function identifyLogFilesPerCourseRun(directoryPath) {
+async function identifyLogFilesPerCourseRun(directoryPath, courses) {
   const fileEnding = ".log.gz";
   let logFilesPerCourseRun = {};
   let directories = await fs.promises.readdir(directoryPath);
@@ -50,13 +53,14 @@ async function identifyLogFilesPerCourseRun(directoryPath) {
  * Function that runs all the necessary functions to process the sessions for a course run
  * @param {string} courseRunDirName The name of the course run directory
  * @param {string[]} logFiles The log file paths for the course run
+ * @param {cliProgress.SingleBar} bar The progress bar
  */
-async function processSessionsForCourseRun(courseRunDirName, logFiles) {
-  await processGeneralSessions(courseRunDirName, logFiles);
-  await processVideoInteractionSessions(courseRunDirName, logFiles);
-  await processAssessmentsSubmissions(courseRunDirName, logFiles);
-  await processQuizSessions(courseRunDirName, logFiles);
-  await processORASessions(courseRunDirName, logFiles);
+async function processSessionsForCourseRun(courseRunDirName, logFiles, bar) {
+  await processGeneralSessions(courseRunDirName, logFiles, bar);
+  await processVideoInteractionSessions(courseRunDirName, logFiles, bar);
+  await processAssessmentsSubmissions(courseRunDirName, logFiles, bar);
+  await processQuizSessions(courseRunDirName, logFiles, bar);
+  await processORASessions(courseRunDirName, logFiles, bar);
 }
 
 /**
@@ -64,13 +68,19 @@ async function processSessionsForCourseRun(courseRunDirName, logFiles) {
  * @param {string} courseRunDirName The name of the course run directory
  * @param {string[]} logFiles The log file paths for the course run
  * @param {string} coursesDirectory The top-level directory all course runs are in
+ * @param {cliProgress.SingleBar} bar The progress bar
  */
-async function processCourseRun(courseRunDirName, logFiles, coursesDirectory) {
+async function processCourseRun(
+  courseRunDirName,
+  logFiles,
+  coursesDirectory,
+  bar,
+) {
   await readMetadataFiles(
     path.join(coursesDirectory, courseRunDirName),
     courseRunDirName,
   );
-  await processSessionsForCourseRun(courseRunDirName, logFiles);
+  await processSessionsForCourseRun(courseRunDirName, logFiles, bar);
 }
 
 async function main() {
@@ -93,16 +103,28 @@ async function main() {
       await clearSessionsCollections();
     }
 
-    const logFilesPerCourseRun =
-      await identifyLogFilesPerCourseRun(workingDirectory);
+    const logFilesPerCourseRun = await identifyLogFilesPerCourseRun(
+      workingDirectory,
+      courses,
+    );
 
     const courseRunPromises = [];
+    const totalLogFiles = Object.values(logFilesPerCourseRun).reduce(
+      (sum, logFiles) => sum + logFiles.length,
+      0,
+    );
+    const totalSessionFunctions = 5;
+    const bar = new cliProgress.SingleBar(
+      {},
+      cliProgress.Presets.shades_classic,
+    );
+    bar.start(totalLogFiles * totalSessionFunctions, 0);
 
     for (const [courseRunDirName, logFiles] of Object.entries(
       logFilesPerCourseRun,
     )) {
       courseRunPromises.push(
-        processCourseRun(courseRunDirName, logFiles, workingDirectory),
+        processCourseRun(courseRunDirName, logFiles, workingDirectory, bar),
       );
     }
 
