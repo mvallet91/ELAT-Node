@@ -1,5 +1,5 @@
 const config = require("./config");
-const fs = require("fs");
+const fs = require("fs").promises;
 const path = require("path");
 const getDayDiff = require("./helpers").getDayDiff;
 const compareDatetime = require("./helpers").compareDatetime;
@@ -9,62 +9,46 @@ const cleanUnicode = require("./helpers").cleanUnicode;
 const escapeString = require("./helpers").escapeString;
 const mongoInsert = require("./databaseHelpers").mongoInsert;
 
-async function readMetadataFiles(directoryPath) {
+/**
+ * Function that reads the metadata files for a course run and processes them
+ * @param {string} coursePath Path to the directory containing the metadata files
+ * @param {string} courseRunName Name of the course run
+ */
+async function readMetadataFiles(coursePath, courseRunName) {
   let processedFiles = [];
   let fileNames = "Names: ";
   const sqlType = "sql",
     jsonType = "json",
     mongoType = "mongo";
+  const files = await fs.readdir(coursePath);
 
-  fs.readdir(directoryPath, (err, files) => {
-    if (err) {
-      console.error("Error reading directory:", err);
-      return;
+  for (let file of files) {
+    const filePath = path.join(coursePath, file);
+    if (file.includes("zip")) {
+      console.error("Metadata files have to be unzipped!");
+      continue;
     }
-    let counter = 0;
-    files.forEach((file) => {
-      const filePath = path.join(directoryPath, file);
-      if (file.includes("zip")) {
-        console.error("Metadata files have to be unzipped!");
-        return;
-      }
-      if (
-        file.includes(sqlType) ||
-        file.includes(jsonType) ||
-        file.includes(mongoType)
-      ) {
-        fs.readFile(filePath, "utf8", (err, content) => {
-          if (err) {
-            console.error("Error reading file:", err);
-            return;
-          }
-          processedFiles.push({
-            key: file,
-            value: content,
-          });
-          fileNames =
-            fileNames + file + " size: " + content.length + " bytes \n";
-          counter++;
-          if (counter === files.length) {
-            // Call the processing function here
-            processMetadataFiles(processedFiles);
-          }
-        });
-      } else {
-        counter++;
-      }
-    });
-  });
+    if (
+      file.includes(sqlType) ||
+      file.includes(jsonType) ||
+      file.includes(mongoType)
+    ) {
+      const content = await fs.readFile(filePath, "utf8");
+      processedFiles.push({ key: file, value: content });
+      fileNames += file + " size: " + content.length + " bytes \n";
+    }
+  }
+  await processMetadataFiles(processedFiles, courseRunName);
 }
 
 /**
  * Handles all the functions to process the metadata files, starting from the course structure, then the construction of a dictionary of files by their name, to then call the appropriate function to process each one by the data they contain, and finally store the data in the corresponding tables of the database
  * @param {FileList} files Array of all files
  */
-async function processMetadataFiles(files) {
+async function processMetadataFiles(files, courseRunName) {
   let courseMetadataMap = ExtractCourseInformation(files);
   if (Object.keys(courseMetadataMap).length < 1) {
-    console.log("Course structure file is missing");
+    console.warn("Course structure file is missing");
   } else {
     let segmentationType = { type: config.segmentationType };
 
@@ -73,7 +57,7 @@ async function processMetadataFiles(files) {
     ]);
 
     let courseRecord = [],
-      course_id = courseMetadataMap.course_id,
+      courseId = courseMetadataMap.course_id,
       fileMap = {};
     courseRecord.push([
       courseMetadataMap["course_id"],
@@ -82,7 +66,7 @@ async function processMetadataFiles(files) {
       courseMetadataMap["end_time"],
     ]);
 
-    let shortId = course_id.slice(course_id.indexOf(":") + 1);
+    let shortId = courseId.slice(courseId.indexOf(":") + 1);
     shortId = shortId.replace("+", "-").replace("+", "-");
     for (let file of files) {
       let fileName = file["key"];
@@ -112,16 +96,16 @@ async function processMetadataFiles(files) {
     } else {
       console.log("All files are present");
       let courseElementRecord = [];
-      for (let element_id in courseMetadataMap["element_time_map"]) {
+      for (let elementId in courseMetadataMap["element_time_map"]) {
         let element_start_time = new Date(
-          courseMetadataMap["element_time_map"][element_id],
+          courseMetadataMap["element_time_map"][elementId],
         );
         let week =
           getDayDiff(courseMetadataMap["start_time"], element_start_time) / 7 +
           1;
         let array = [
-          element_id,
-          courseMetadataMap["element_type_map"][element_id],
+          elementId,
+          courseMetadataMap["element_type_map"][elementId],
           week,
           courseMetadataMap["course_id"],
         ];
@@ -134,7 +118,7 @@ async function processMetadataFiles(files) {
       );
 
       let enrollmentValues = processEnrollment(
-        course_id,
+        courseId,
         fileMap["student_courseenrollment-prod-analytics"],
         courseMetadataMap,
       );
@@ -156,14 +140,14 @@ async function processMetadataFiles(files) {
       let groupMap = {};
       if ("course_groups_cohortmembership-prod-analytics" in fileMap) {
         groupMap = processGroups(
-          course_id,
+          courseId,
           fileMap["course_groups_cohortmembership-prod-analytics"],
           enrollmentValues,
         );
       }
 
       let demographicValues = processDemographics(
-        course_id,
+        courseId,
         fileMap["auth_userprofile-prod-analytics"],
         enrollmentValues,
         learnerAuthMap,
@@ -319,15 +303,6 @@ async function processMetadataFiles(files) {
           data.push(values);
         }
         await mongoInsert("forum_interaction", data);
-
-        // deleteIfExists('forum_interaction');
-        // for (let array of data) {
-        //   try {
-        //       mongoInsert('forum_interaction', array)
-        //   } catch (error) {
-        //       console.log(array)
-        //   }
-        // }
       }
 
       let quizQuestionMap = courseMetadataMap["quiz_question_map"],
@@ -361,7 +336,7 @@ async function processMetadataFiles(files) {
       }
       await mongoInsert("quiz_questions", quizData);
       await mongoInsert("metadata", [
-        { name: "metadata_map", object: courseMetadataMap },
+        { name: courseRunName, object: courseMetadataMap },
       ]);
     }
   }
@@ -500,7 +475,9 @@ function ExtractCourseInformation(files) {
       courseMetadataMap["block_type_map"] = block_type_map;
       courseMetadataMap["order_map"] = order_map;
       courseMetadataMap["element_name_map"] = element_name_map;
-      console.log("Metadata map ready");
+      console.log(
+        "Metadata map ready for course run: " + courseMetadataMap["course_id"],
+      );
       return courseMetadataMap;
     }
   }
