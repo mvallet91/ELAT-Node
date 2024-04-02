@@ -1431,6 +1431,7 @@ async function processORASessions(courseRunName, logFiles, bar) {
     bar.increment();
   }
   if (oraSessionsRecord.length > 0) {
+    let data = [];
     for (let array of oraSessionsRecord) {
       let sessionId = array[0];
       const courseLearnerId = array[1],
