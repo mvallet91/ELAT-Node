@@ -129,6 +129,7 @@ async function main() {
     }
 
     await Promise.all(courseRunPromises);
+    bar.stop();
   } catch (error) {
     console.error(error);
   }
