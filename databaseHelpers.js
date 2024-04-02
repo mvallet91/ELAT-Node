@@ -128,4 +128,57 @@ async function deleteIfExists(collectionName) {
   }
 }
 
-module.exports = { testConnection, mongoInsert, mongoQuery, deleteIfExists };
+async function clearDatabase() {
+  const client = new MongoClient(url);
+  try {
+    await client.connect();
+    const db = client.db(dbName);
+    const collections = await db.collections();
+    for (let collection of collections) {
+      await db.collection(collection.collectionName).drop();
+    }
+    console.log("Cleared database");
+  } catch (err) {
+    console.error("An error occurred while clearing the database:", err);
+  } finally {
+    await client.close();
+  }
+}
+
+async function clearSessionsCollections() {
+  // table names: sessions, video_interactions, assessments, submissions, quiz_sessions.
+  const client = new MongoClient(url);
+  try {
+    await client.connect();
+    const db = client.db(dbName);
+    const collections = await db.collections();
+    for (let collection of collections) {
+      if (
+        collection.collectionName === "sessions" ||
+        collection.collectionName === "video_interactions" ||
+        collection.collectionName === "assessments" ||
+        collection.collectionName === "submissions" ||
+        collection.collectionName === "quiz_sessions"
+      ) {
+        await db.collection(collection.collectionName).drop();
+      }
+    }
+    console.log("Cleared sessions collections");
+  } catch (err) {
+    console.error(
+      "An error occurred while clearing the sessions collections:",
+      err,
+    );
+  } finally {
+    await client.close();
+  }
+}
+
+module.exports = {
+  testConnection,
+  mongoInsert,
+  mongoQuery,
+  deleteIfExists,
+  clearDatabase,
+  clearSessionsCollections,
+};
