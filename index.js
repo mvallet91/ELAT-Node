@@ -82,6 +82,7 @@ async function identifyLogFilesPerCourseRun(directoryPath, courses) {
       }
 
       logFilesPerCourseRun[dirName] = files;
+      bar.stop();
     }
   }
   identifyLogFilesBar.stop();
@@ -92,54 +93,35 @@ async function identifyLogFilesPerCourseRun(directoryPath, courses) {
  * Function that runs all the necessary functions to process the sessions for a course run
  * @param {string} courseRunDirName The name of the course run directory
  * @param {string[]} logFiles The log file paths for the course run
- * @param {cliProgress.MultiBar} bar The progress bar
+ * @param {cliProgress.SingleBar[]} courseRunBars The progress bars for this course run
  */
-async function processSessionsForCourseRun(courseRunDirName, logFiles, bar) {
-  const processGeneralSessionsBar = bar.create(logFiles.length, 0, {
-    course_run: courseRunDirName,
-    task: "General Sessions",
-  });
-  await processGeneralSessions(
-    courseRunDirName,
-    logFiles,
-    processGeneralSessionsBar,
-  );
-  processGeneralSessionsBar.stop();
+async function processSessionsForCourseRun(
+  courseRunDirName,
+  logFiles,
+  courseRunBars,
+) {
+  await processGeneralSessions(courseRunDirName, logFiles, courseRunBars[0]);
+  courseRunBars[0].stop();
 
-  const processVideoInteractionSessionsBar = bar.create(logFiles.length, 0, {
-    course_run: courseRunDirName,
-    task: "Video Interaction Sessions",
-  });
   await processVideoInteractionSessions(
     courseRunDirName,
     logFiles,
-    processVideoInteractionSessionsBar,
+    courseRunBars[1],
   );
-  processVideoInteractionSessionsBar.stop();
+  courseRunBars[1].stop();
 
-  const processAssessmentsSubmissionsBar = bar.create(logFiles.length, 0, {
-    course_run: courseRunDirName,
-    task: "Assessments Submissions",
-  });
   await processAssessmentsSubmissions(
+    courseRunDirName,
     logFiles,
-    processAssessmentsSubmissionsBar,
+    courseRunBars[2],
   );
-  processAssessmentsSubmissionsBar.stop();
+  courseRunBars[2].stop();
 
-  const processQuizSessionsBar = bar.create(logFiles.length, 0, {
-    course_run: courseRunDirName,
-    task: "Quiz Sessions",
-  });
-  await processQuizSessions(courseRunDirName, logFiles, processQuizSessionsBar);
-  processQuizSessionsBar.stop();
+  await processQuizSessions(courseRunDirName, logFiles, courseRunBars[3]);
+  courseRunBars[3].stop();
 
-  const processORASessionsBar = bar.create(logFiles.length, 0, {
-    course_run: courseRunDirName,
-    task: "ORA Sessions",
-  });
-  await processORASessions(courseRunDirName, logFiles, processORASessionsBar);
-  processORASessionsBar.stop();
+  await processORASessions(courseRunDirName, logFiles, courseRunBars[4]);
+  courseRunBars[4].stop();
 }
 
 /**
@@ -147,23 +129,23 @@ async function processSessionsForCourseRun(courseRunDirName, logFiles, bar) {
  * @param {string} courseRunDirName The name of the course run directory
  * @param {string[]} logFiles The log file paths for the course run
  * @param {string} coursesDirectory The top-level directory all course runs are in
- * @param {cliProgress.MultiBar} bar The progress bar
+ * @param {cliProgress.SingleBar[]} courseRunBars The progress bars for this course run
  */
 async function processCourseRun(
   courseRunDirName,
   logFiles,
   coursesDirectory,
-  bar,
+  courseRunBars,
 ) {
   await readMetadataFiles(
     path.join(coursesDirectory, courseRunDirName),
     courseRunDirName,
   );
-  await processSessionsForCourseRun(courseRunDirName, logFiles, bar);
+  await processSessionsForCourseRun(courseRunDirName, logFiles, courseRunBars);
 }
 
 async function main() {
-  const testing = true;
+  const testing = false;
 
   let courses = ["EX101x", "FP101x", "ST1x", "UnixTx"];
   let workingDirectory = "W:/staff-umbrella/gdicsmoocs/Working copy";
@@ -193,13 +175,37 @@ async function main() {
       cliProgress.Presets.shades_grey,
     );
 
+    const logProcessingFunctions = [
+      "General Sessions",
+      "Video Interaction Sessions",
+      "Assessments Submissions",
+      "Quiz Sessions",
+      "ORA Sessions",
+    ];
+    const logProcessingBars = {};
+    for (let courseRunDirName in logFilesPerCourseRun) {
+      logProcessingBars[courseRunDirName] = [];
+      for (let logProcessingFunction of logProcessingFunctions) {
+        logProcessingBars[courseRunDirName].push(
+          logProcessingBar.create(
+            logFilesPerCourseRun[courseRunDirName].length,
+            0,
+            {
+              course_run: courseRunDirName,
+              task: logProcessingFunction,
+            },
+          ),
+        );
+      }
+    }
+
     for (let courseRunDirName in logFilesPerCourseRun) {
       const logFiles = logFilesPerCourseRun[courseRunDirName];
       await processCourseRun(
         courseRunDirName,
         logFiles,
         workingDirectory,
-        logProcessingBar,
+        logProcessingBars[courseRunDirName],
       );
     }
 

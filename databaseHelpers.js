@@ -4,7 +4,7 @@ const credentials = require("./credentials");
 // Database Name
 const prodDbName = "edx_test";
 const testingDbName = "edx_testing";
-const isTesting = true;
+const isTesting = false;
 const username = encodeURIComponent(credentials.admin.user);
 const password = encodeURIComponent(credentials.admin.pwd);
 const mogodb_url = credentials.mongodb_url;
