@@ -47,8 +47,10 @@ async function identifyLogFilesPerCourseRun(directoryPath, courses) {
   const fileEnding = ".log.gz";
   const identifyLogFilesBar = new cliProgress.MultiBar(
     {
-      clearOnComplete: false,
+      clearOnComplete: true,
       hideCursor: true,
+      barsize: 20,
+      etaBuffer: 20,
       format:
         " {bar} | Identifying log files for {course_run} | {value}/{total} | Duration: {duration_formatted} | ETA: {eta_formatted}",
     },
@@ -167,8 +169,10 @@ async function main() {
 
     const logProcessingBar = new cliProgress.MultiBar(
       {
-        clearOnComplete: false,
+        clearOnComplete: true,
         hideCursor: true,
+        barsize: 20,
+        etaBuffer: 20,
         format:
           " {bar} | Processing {task} for {course_run} | {value}/{total} | Duration: {duration_formatted} | ETA: {eta_formatted}",
       },
