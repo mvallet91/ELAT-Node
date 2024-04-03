@@ -55,7 +55,9 @@ async function processGeneralSessions(courseRunName, logFiles, bar) {
       }
 
       let jsonObject = JSON.parse(line);
-      if (!jsonObject["context"].hasOwnProperty("user_id")) {
+      if (
+        !Object.prototype.hasOwnProperty.call(jsonObject["context"], "user_id")
+      ) {
         continue;
       }
       let globalLearnerId = jsonObject["context"]["user_id"];
@@ -225,8 +227,6 @@ async function processVideoInteractionSessions(courseRunName, logFiles, bar) {
       courseId.lastIndexOf("+") + 7,
     );
 
-  let currentDate = new Date(courseMetadataMap["start_date"]);
-
   const videoEventTypes = [
     "hide_transcript",
     "edx.video.transcript.hidden",
@@ -254,7 +254,6 @@ async function processVideoInteractionSessions(courseRunName, logFiles, bar) {
   for (let i = 0; i < logFiles.length; i++) {
     let videoInteractionMap = {},
       learnerVideoEventLogs = {},
-      updatedLearnerVideoEventLogs = {},
       courseLearnerIdSet = new Set();
     const logFile = logFiles[i];
     for await (const line of readLines(logFile)) {
@@ -398,7 +397,6 @@ async function processVideoInteractionSessions(courseRunName, logFiles, bar) {
       });
       let videoId = "",
         videoStartTime = null,
-        finalTime = null,
         timesForwardSeek = 0,
         durationForwardSeek = 0,
         timesBackwardSeek = 0,
@@ -407,8 +405,7 @@ async function processVideoInteractionSessions(courseRunName, logFiles, bar) {
         timesSpeedUp = 0,
         timesSpeedDown = 0,
         pauseCheck = false,
-        pauseStartTime = null,
-        durationPause = 0;
+        pauseStartTime = null;
       for (let log of eventLogs) {
         if (["play_video", "edx.video.played"].includes(log["event_type"])) {
           videoStartTime = new Date(log["event_time"]);
@@ -421,7 +418,8 @@ async function processVideoInteractionSessions(courseRunName, logFiles, bar) {
             if (durationPause > 2 && durationPause < 600) {
               if (videoInteractionId in videoInteractionMap) {
                 if (
-                  videoInteractionMap[videoInteractionId].hasOwnProperty(
+                  Object.prototype.hasOwnProperty.call(
+                    videoInteractionMap[videoInteractionId],
                     "times_pause",
                   )
                 ) {
@@ -449,7 +447,6 @@ async function processVideoInteractionSessions(courseRunName, logFiles, bar) {
           ) {
             videoStartTime = null;
             videoId = "";
-            finalTime = log["event_time"];
           } else {
             // Seek
             if (
@@ -550,7 +547,6 @@ async function processVideoInteractionSessions(courseRunName, logFiles, bar) {
               timesSpeedDown = 0;
               videoStartTime = null;
               videoId = "";
-              finalTime = log["event_time"];
               continue;
             }
 
@@ -585,7 +581,6 @@ async function processVideoInteractionSessions(courseRunName, logFiles, bar) {
               timesSpeedDown = 0;
               videoStartTime = null;
               videoId = "";
-              finalTime = log["event_time"];
             }
           }
         }
@@ -615,7 +610,12 @@ async function processVideoInteractionSessions(courseRunName, logFiles, bar) {
       let timesPause = 0,
         durationPause = 0;
 
-      if (videoInteractionMap[interactionId].hasOwnProperty("times_pause")) {
+      if (
+        Object.prototype.hasOwnProperty.call(
+          videoInteractionMap[interactionId],
+          "times_pause",
+        )
+      ) {
         timesPause = videoInteractionMap[interactionId]["times_pause"];
         durationPause = videoInteractionMap[interactionId]["duration_pause"];
       }
@@ -698,19 +698,7 @@ async function processVideoInteractionSessions(courseRunName, logFiles, bar) {
  * @param {string[]} logFiles - The list of log files
  * @param {cliProgress.SingleBar} bar - The progress bar
  */
-async function processAssessmentsSubmissions(courseRunName, logFiles, bar) {
-  let courseMetadataMap = await mongoQuery("metadata", {
-    name: courseRunName,
-  });
-
-  courseMetadataMap = courseMetadataMap[0]["object"];
-  let currentDate = new Date(courseMetadataMap["start_date"]);
-  let courseId = courseMetadataMap["course_id"];
-  let currentCourseId = courseId.slice(
-    courseId.indexOf("+") + 1,
-    courseId.lastIndexOf("+") + 7,
-  );
-
+async function processAssessmentsSubmissions(logFiles, bar) {
   let submissionEventCollection = ["problem_check"];
 
   for (let i = 0; i < logFiles.length; i++) {
@@ -786,7 +774,6 @@ async function processQuizSessions(courseRunName, logFiles, bar) {
     name: courseRunName,
   });
   courseMetadataMap = courseMetadataMap[0]["object"];
-  let currentDate = new Date(courseMetadataMap["start_date"]);
   const courseId = courseMetadataMap["course_id"];
   const currentCourseId = courseId.slice(
     courseId.indexOf("+") + 1,
@@ -838,7 +825,7 @@ async function processQuizSessions(courseRunName, logFiles, bar) {
       const globalLearnerId = jsonObject["context"]["user_id"],
         event_type = jsonObject["event_type"];
       let eventInfo = "";
-      if (jsonObject.hasOwnProperty("event")) {
+      if (Object.prototype.hasOwnProperty.call(jsonObject, "event")) {
         eventInfo = jsonObject["event"];
       }
       if (globalLearnerId === "") {
@@ -868,7 +855,12 @@ async function processQuizSessions(courseRunName, logFiles, bar) {
     // different structure from original logs to mongodb
 
     for (const courseLearnerId in learnerAllEventLogs) {
-      if (!learnerAllEventLogs.hasOwnProperty(courseLearnerId)) {
+      if (
+        !Object.prototype.hasOwnProperty.call(
+          learnerAllEventLogs,
+          courseLearnerId,
+        )
+      ) {
         continue;
       }
       let eventLogs = learnerAllEventLogs[courseLearnerId];
@@ -889,7 +881,6 @@ async function processQuizSessions(courseRunName, logFiles, bar) {
             eventLogs[i]["event_type"].includes("_problem;_") ||
             submissionEventCollection.includes(eventLogs[i]["event_type"])
           ) {
-            const eventTypeArray = eventLogs[i]["event_type"].split("/");
             let questionId = "";
             if (eventLogs[i]["event_type"].includes("problem+block")) {
               // questionId = eventTypeArray[4];
@@ -937,7 +928,6 @@ async function processQuizSessions(courseRunName, logFiles, bar) {
                 eventLogs[i]["event_type"].includes("_problem;_") ||
                 submissionEventCollection.includes(eventLogs[i]["event_type"])
               ) {
-                let eventTypeArray = eventLogs[i]["event_type"].split("/");
                 let questionId = "";
                 if (eventLogs[i]["event_type"].includes("problem+block")) {
                   // questionId = event_type_array[4];
@@ -1002,7 +992,7 @@ async function processQuizSessions(courseRunName, logFiles, bar) {
       }
     }
     for (let sessionId in quizSessions) {
-      if (!quizSessions.hasOwnProperty(sessionId)) {
+      if (!Object.prototype.hasOwnProperty.call(quizSessions, sessionId)) {
         continue;
       }
       if (Object.keys(quizSessions[sessionId]["time_array"]).length > 1) {
@@ -1066,7 +1056,7 @@ async function processQuizSessions(courseRunName, logFiles, bar) {
 
     let quizSessionRecord = [];
     for (let sessionId in quizSessions) {
-      if (!quizSessions.hasOwnProperty(sessionId)) {
+      if (!Object.prototype.hasOwnProperty.call(quizSessions, sessionId)) {
         continue;
       }
       let courseLearnerId = quizSessions[sessionId]["course_learner_id"];
@@ -1102,12 +1092,6 @@ async function processQuizSessions(courseRunName, logFiles, bar) {
       let data = [];
       for (let array of quizSessionRecord) {
         let sessionId = array[0];
-        if (chunk !== 0) {
-          sessionId = sessionId + "_" + chunk;
-        }
-        if (index !== 0) {
-          sessionId = sessionId + "_" + index;
-        }
         let courseLearnerId = array[1];
         let startTime = array[2];
         let endTime = array[3];
@@ -1176,19 +1160,14 @@ async function processORASessions(courseRunName, logFiles, bar) {
     courseId.lastIndexOf("+") + 7,
   );
 
-  const currentDate = courseMetadataMap["start_date"];
-
-  let childParentMap = courseMetadataMap["child_parent_map"];
-
   let learnerAllEventLogs = {};
   let updatedLearnerAllEventLogs = {};
 
   for (let i = 0; i < logFiles.length; i++) {
     learnerAllEventLogs = updatedLearnerAllEventLogs;
-    (updatedLearnerAllEventLogs = {}),
-      (oraSessions = {}),
-      (oraEvents = {}),
-      (oraSessionsRecord = []);
+    updatedLearnerAllEventLogs = {};
+    let oraEvents = {};
+    let oraSessionsRecord = [];
 
     const logFile = logFiles[i];
     let courseLearnerIdSet = new Set();
@@ -1235,7 +1214,6 @@ async function processORASessions(courseRunName, logFiles, bar) {
       let sessionId = "",
         startTime = null,
         endTime = null,
-        finalTime = null,
         currentStatus = "",
         currentElement = "",
         saveCount = 0,
@@ -1281,7 +1259,6 @@ async function processORASessions(courseRunName, logFiles, bar) {
           }
         } else {
           if (eventLogs[i]["event_type"].includes("openassessment")) {
-            let previousElement = currentElement;
             let eventDetails = getORAEventTypeAndElement(
               eventLogs[i]["full_event"],
             );
@@ -1314,7 +1291,6 @@ async function processORASessions(courseRunName, logFiles, bar) {
                 ];
                 oraSessionsRecord.push(array);
               }
-              finalTime = new Date(eventLogs[i]["event_time"]);
               learnerOraEvents.push(
                 "Over 30 min, to store: " +
                   currentStatus +
@@ -1409,7 +1385,6 @@ async function processORASessions(courseRunName, logFiles, bar) {
               oraSessionsRecord.push(array);
             }
 
-            finalTime = new Date(eventLogs[i]["event_time"]);
             sessionId = "";
             startTime = null;
             endTime = null;

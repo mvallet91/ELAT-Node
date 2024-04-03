@@ -16,7 +16,6 @@ const mongoInsert = require("./databaseHelpers").mongoInsert;
  */
 async function readMetadataFiles(coursePath, courseRunName) {
   let processedFiles = [];
-  let fileNames = "Names: ";
   const sqlType = "sql",
     jsonType = "json",
     mongoType = "mongo";
@@ -35,7 +34,6 @@ async function readMetadataFiles(coursePath, courseRunName) {
     ) {
       const content = await fs.readFile(filePath, "utf8");
       processedFiles.push({ key: file, value: content });
-      fileNames += file + " size: " + content.length + " bytes \n";
     }
   }
   await processMetadataFiles(processedFiles, courseRunName);
@@ -154,23 +152,19 @@ async function processMetadataFiles(files, courseRunName) {
 
       let forumInteractionRecords = [];
 
-      if (courseRecord.length > 0) {
-        let rows = [];
-        for (let array of courseRecord) {
-          let course_id = courseMetadataMap["course_id"];
-          let course_name = courseMetadataMap["course_name"];
-          let start_time = courseMetadataMap["start_time"];
-          let end_time = courseMetadataMap["end_time"];
-          let values = {
-            course_id: course_id,
-            course_name: course_name,
-            start_time: start_time,
-            end_time: end_time,
-          };
-          rows.push(values);
-        }
-        await mongoInsert("courses", rows);
-      }
+      let rows = [];
+      let course_id = courseMetadataMap["course_id"];
+      let course_name = courseMetadataMap["course_name"];
+      let start_time = courseMetadataMap["start_time"];
+      let end_time = courseMetadataMap["end_time"];
+      let values = {
+        course_id: course_id,
+        course_name: course_name,
+        start_time: start_time,
+        end_time: end_time,
+      };
+      rows.push(values);
+      await mongoInsert("courses", rows);
 
       if (courseElementRecord.length > 0) {
         let data = [];
@@ -440,7 +434,12 @@ function ExtractCourseInformation(files) {
         let element_start_time = "";
         while (element_start_time === "") {
           let element_parent = child_parent_map[element_id];
-          while (!element_time_map.hasOwnProperty(element_parent)) {
+          while (
+            !Object.prototype.hasOwnProperty.call(
+              element_time_map,
+              element_parent,
+            )
+          ) {
             element_parent = child_parent_map[element_parent];
           }
           element_start_time = element_time_map[element_parent];
@@ -743,7 +742,7 @@ function processForumPostingInteraction(forum_file, courseMetadataMap) {
     }
 
     let post_title = "";
-    if (jsonObject.hasOwnProperty("title")) {
+    if (Object.prototype.hasOwnProperty.call(jsonObject, "title")) {
       post_title = '"' + jsonObject["title"] + '"';
     }
 
@@ -751,12 +750,12 @@ function processForumPostingInteraction(forum_file, courseMetadataMap) {
     let post_timestamp = new Date(jsonObject["created_at"]);
 
     let post_parent_id = "";
-    if (jsonObject.hasOwnProperty("parent_id")) {
+    if (Object.prototype.hasOwnProperty.call(jsonObject, "parent_id")) {
       post_parent_id = jsonObject["parent_id"]["$oid"];
     }
 
     let post_thread_id = "";
-    if (jsonObject.hasOwnProperty("comment_thread_id")) {
+    if (Object.prototype.hasOwnProperty.call(jsonObject, "comment_thread_id")) {
       post_thread_id = jsonObject["comment_thread_id"]["$oid"];
     }
     let array = [

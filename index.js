@@ -14,8 +14,28 @@ const {
 
 const fs = require("fs");
 const path = require("path");
+const { promisify } = require("util");
+const zlib = require("zlib");
 
 const cliProgress = require("cli-progress");
+
+const gunzip = promisify(zlib.gunzip);
+
+/**
+ * Function to check if a file has a valid gzip header.
+ * @param {string} filePath Path to the file to check.
+ * @returns {Promise<boolean>} Promise that resolves to true if the file is valid, false otherwise.
+ */
+async function isValidGzipFile(filePath) {
+  try {
+    const fileBuffer = await fs.promises.readFile(filePath);
+    await gunzip(fileBuffer);
+    return true;
+  } catch (error) {
+    console.warn(`${filePath} does not have a valid gzip header.`);
+    return false;
+  }
+}
 
 /**
  * Function that identifies the log files for each course run
@@ -25,6 +45,15 @@ const cliProgress = require("cli-progress");
  */
 async function identifyLogFilesPerCourseRun(directoryPath, courses) {
   const fileEnding = ".log.gz";
+  const identifyLogFilesBar = new cliProgress.MultiBar(
+    {
+      clearOnComplete: false,
+      hideCursor: true,
+      format: " {bar} | {course_run} | {value}/{total}",
+    },
+    cliProgress.Presets.shades_classic,
+  );
+
   let logFilesPerCourseRun = {};
   let directories = await fs.promises.readdir(directoryPath);
   for (let dirName of directories) {
@@ -32,14 +61,23 @@ async function identifyLogFilesPerCourseRun(directoryPath, courses) {
       let coursePath = path.join(path.resolve(directoryPath), dirName);
       let files = [];
       let fileNames = await fs.promises.readdir(coursePath);
+      const bar = identifyLogFilesBar.create(fileNames.length, 0, {
+        course_run: dirName,
+      });
       for (let fileName of fileNames) {
         if (fileName.endsWith(fileEnding)) {
-          files.push(path.join(coursePath, fileName));
+          const fullPath = path.join(coursePath, fileName);
+          if (await isValidGzipFile(fullPath)) {
+            files.push(fullPath);
+          } else {
+            console.warn(`Skipping invalid gzip file: ${fullPath}`);
+          }
         }
+        bar.increment();
       }
 
       if (files.length === 0) {
-        console.warn(`No log files found for ${dirName}`);
+        console.warn(`No valid gzip log files found for ${dirName}`);
       }
 
       logFilesPerCourseRun[dirName] = files;
@@ -58,7 +96,7 @@ async function identifyLogFilesPerCourseRun(directoryPath, courses) {
 async function processSessionsForCourseRun(courseRunDirName, logFiles, bar) {
   await processGeneralSessions(courseRunDirName, logFiles, bar);
   await processVideoInteractionSessions(courseRunDirName, logFiles, bar);
-  await processAssessmentsSubmissions(courseRunDirName, logFiles, bar);
+  await processAssessmentsSubmissions(logFiles, bar);
   await processQuizSessions(courseRunDirName, logFiles, bar);
   await processORASessions(courseRunDirName, logFiles, bar);
 }
@@ -108,28 +146,31 @@ async function main() {
       courses,
     );
 
-    const courseRunPromises = [];
-    const totalLogFiles = Object.values(logFilesPerCourseRun).reduce(
-      (sum, logFiles) => sum + logFiles.length,
-      0,
-    );
     const totalSessionFunctions = 5;
-    const bar = new cliProgress.SingleBar(
-      {},
-      cliProgress.Presets.shades_classic,
+    const logProcessingBar = new cliProgress.MultiBar(
+      {
+        clearOnComplete: false,
+        hideCursor: true,
+        format: " {bar} | {course_run} | {value}/{total}",
+      },
+      cliProgress.Presets.shades_grey,
     );
-    bar.start(totalLogFiles * totalSessionFunctions, 0);
 
-    for (const [courseRunDirName, logFiles] of Object.entries(
-      logFilesPerCourseRun,
-    )) {
-      courseRunPromises.push(
-        processCourseRun(courseRunDirName, logFiles, workingDirectory, bar),
+    for (let courseRunDirName in logFilesPerCourseRun) {
+      const logFiles = logFilesPerCourseRun[courseRunDirName];
+      const totalLogFiles = logFiles.length;
+      const bar = logProcessingBar.create(
+        totalLogFiles * totalSessionFunctions,
+        0,
+        {
+          course_run: courseRunDirName,
+        },
       );
+      bar.start();
+      await processCourseRun(courseRunDirName, logFiles, workingDirectory, bar);
     }
 
-    await Promise.all(courseRunPromises);
-    bar.stop();
+    logProcessingBar.stop();
   } catch (error) {
     console.error(error);
   }

@@ -36,13 +36,6 @@ async function mongoInsert(collectionName, dataRows) {
     await client.connect();
     const collection = client.db(dbName).collection(collectionName);
 
-    // From original code, not sure why this is here
-    // if (collectionName === 'forum_interaction'){
-    //   console.log('Deleting existing forum_interaction collection')
-    //   await deleteIfExists(collectionName);
-    // }
-
-    // Process the dataRows as needed (e.g., handling date fields)
     for (let v of dataRows) {
       for (let field of Object.keys(v)) {
         if (field.includes("time")) {
@@ -51,24 +44,7 @@ async function mongoInsert(collectionName, dataRows) {
         }
       }
     }
-    const result = await collection.insertMany(dataRows);
-    let info = "";
-    if (collectionName === "webdata" || collectionName === "metadata") {
-      info = dataRows[0]["name"];
-    } else {
-      info = dataRows.length;
-    }
-    if (dataRows.length > 0) {
-      let today = new Date();
-      let time =
-        today.getHours() +
-        ":" +
-        today.getMinutes() +
-        ":" +
-        today.getSeconds() +
-        "." +
-        today.getMilliseconds();
-    }
+    await collection.insertMany(dataRows);
   } catch (err) {
     console.error(err);
   } finally {
