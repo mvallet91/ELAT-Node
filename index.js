@@ -49,9 +49,10 @@ async function identifyLogFilesPerCourseRun(directoryPath, courses) {
     {
       clearOnComplete: false,
       hideCursor: true,
-      format: " {bar} | {course_run} | {value}/{total}",
+      format:
+        " {bar} | Identifying log files for {course_run} | {value}/{total} | Duration: {duration_formatted} | ETA: {eta_formatted}",
     },
-    cliProgress.Presets.shades_classic,
+    cliProgress.Presets.shades_classic
   );
 
   let logFilesPerCourseRun = {};
@@ -83,7 +84,7 @@ async function identifyLogFilesPerCourseRun(directoryPath, courses) {
       logFilesPerCourseRun[dirName] = files;
     }
   }
-
+  identifyLogFilesBar.stop();
   return logFilesPerCourseRun;
 }
 
@@ -91,14 +92,54 @@ async function identifyLogFilesPerCourseRun(directoryPath, courses) {
  * Function that runs all the necessary functions to process the sessions for a course run
  * @param {string} courseRunDirName The name of the course run directory
  * @param {string[]} logFiles The log file paths for the course run
- * @param {cliProgress.SingleBar} bar The progress bar
+ * @param {cliProgress.MultiBar} bar The progress bar
  */
 async function processSessionsForCourseRun(courseRunDirName, logFiles, bar) {
-  await processGeneralSessions(courseRunDirName, logFiles, bar);
-  await processVideoInteractionSessions(courseRunDirName, logFiles, bar);
-  await processAssessmentsSubmissions(logFiles, bar);
-  await processQuizSessions(courseRunDirName, logFiles, bar);
-  await processORASessions(courseRunDirName, logFiles, bar);
+  const processGeneralSessionsBar = bar.create(logFiles.length, 0, {
+    course_run: courseRunDirName,
+    task: "General Sessions",
+  });
+  await processGeneralSessions(
+    courseRunDirName,
+    logFiles,
+    processGeneralSessionsBar
+  );
+  processGeneralSessionsBar.stop();
+
+  const processVideoInteractionSessionsBar = bar.create(logFiles.length, 0, {
+    course_run: courseRunDirName,
+    task: "Video Interaction Sessions",
+  });
+  await processVideoInteractionSessions(
+    courseRunDirName,
+    logFiles,
+    processVideoInteractionSessionsBar
+  );
+  processVideoInteractionSessionsBar.stop();
+
+  const processAssessmentsSubmissionsBar = bar.create(logFiles.length, 0, {
+    course_run: courseRunDirName,
+    task: "Assessments Submissions",
+  });
+  await processAssessmentsSubmissions(
+    logFiles,
+    processAssessmentsSubmissionsBar
+  );
+  processAssessmentsSubmissionsBar.stop();
+
+  const processQuizSessionsBar = bar.create(logFiles.length, 0, {
+    course_run: courseRunDirName,
+    task: "Quiz Sessions",
+  });
+  await processQuizSessions(courseRunDirName, logFiles, processQuizSessionsBar);
+  processQuizSessionsBar.stop();
+
+  const processORASessionsBar = bar.create(logFiles.length, 0, {
+    course_run: courseRunDirName,
+    task: "ORA Sessions",
+  });
+  await processORASessions(courseRunDirName, logFiles, processORASessionsBar);
+  processORASessionsBar.stop();
 }
 
 /**
@@ -106,17 +147,17 @@ async function processSessionsForCourseRun(courseRunDirName, logFiles, bar) {
  * @param {string} courseRunDirName The name of the course run directory
  * @param {string[]} logFiles The log file paths for the course run
  * @param {string} coursesDirectory The top-level directory all course runs are in
- * @param {cliProgress.SingleBar} bar The progress bar
+ * @param {cliProgress.MultiBar} bar The progress bar
  */
 async function processCourseRun(
   courseRunDirName,
   logFiles,
   coursesDirectory,
-  bar,
+  bar
 ) {
   await readMetadataFiles(
     path.join(coursesDirectory, courseRunDirName),
-    courseRunDirName,
+    courseRunDirName
   );
   await processSessionsForCourseRun(courseRunDirName, logFiles, bar);
 }
@@ -135,39 +176,31 @@ async function main() {
   try {
     testConnection();
 
-    if (testing) {
-      await clearDatabase();
-    } else {
-      await clearSessionsCollections();
-    }
+    await clearDatabase();
 
     const logFilesPerCourseRun = await identifyLogFilesPerCourseRun(
       workingDirectory,
-      courses,
+      courses
     );
 
-    const totalSessionFunctions = 5;
     const logProcessingBar = new cliProgress.MultiBar(
       {
         clearOnComplete: false,
         hideCursor: true,
-        format: " {bar} | {course_run} | {value}/{total}",
+        format:
+          " {bar} | Processing {task} for {course_run} | {value}/{total} | Duration: {duration_formatted} | ETA: {eta_formatted}",
       },
-      cliProgress.Presets.shades_grey,
+      cliProgress.Presets.shades_grey
     );
 
     for (let courseRunDirName in logFilesPerCourseRun) {
       const logFiles = logFilesPerCourseRun[courseRunDirName];
-      const totalLogFiles = logFiles.length;
-      const bar = logProcessingBar.create(
-        totalLogFiles * totalSessionFunctions,
-        0,
-        {
-          course_run: courseRunDirName,
-        },
+      await processCourseRun(
+        courseRunDirName,
+        logFiles,
+        workingDirectory,
+        logProcessingBar
       );
-      bar.start();
-      await processCourseRun(courseRunDirName, logFiles, workingDirectory, bar);
     }
 
     logProcessingBar.stop();
