@@ -35,16 +35,14 @@ async function processGeneralSessions(courseRunName, logFiles, bar) {
     currentCourseId.lastIndexOf("+") + 7,
   );
 
-  let learnerAllEventLogs = [];
-  let updatedLearnerAllEventLogs = {};
-  let sessionRecord = [];
-
   for (let i = 0; i < logFiles.length; i++) {
+    let learnerAllEventLogs = [];
+    let updatedLearnerAllEventLogs = [];
+    let sessionRecord = [];
     const logFile = logFiles[i];
     learnerAllEventLogs = JSON.parse(
       JSON.stringify(updatedLearnerAllEventLogs),
     );
-    updatedLearnerAllEventLogs = [];
 
     let courseLearnerIdSet = new Set();
     for (const courseLearnerId in learnerAllEventLogs) {
@@ -253,12 +251,11 @@ async function processVideoInteractionSessions(courseRunName, logFiles, bar) {
     "edx.video.language_menu.shown",
   ];
 
-  let videoInteractionMap = {},
-    learnerVideoEventLogs = {},
-    updatedLearnerVideoEventLogs = {},
-    courseLearnerIdSet = new Set();
-
   for (let i = 0; i < logFiles.length; i++) {
+    let videoInteractionMap = {},
+      learnerVideoEventLogs = {},
+      updatedLearnerVideoEventLogs = {},
+      courseLearnerIdSet = new Set();
     const logFile = logFiles[i];
     for await (const line of readLines(logFile)) {
       if (line.length < 10 || !line.includes(currentCourseId)) {
@@ -419,23 +416,23 @@ async function processVideoInteractionSessions(courseRunName, logFiles, bar) {
           if (pauseCheck) {
             let durationPause =
               (new Date(log["event_time"]) - pauseStartTime) / 1000;
-            let videoInteractionID =
+            let videoInteractionId =
               courseLearnerId + "_" + videoId + "_" + pauseStartTime.getTime();
             if (durationPause > 2 && durationPause < 600) {
-              if (videoInteractionID in videoInteractionMap) {
+              if (videoInteractionId in videoInteractionMap) {
                 if (
-                  videoInteractionMap[videoInteractionID].hasOwnProperty(
+                  videoInteractionMap[videoInteractionId].hasOwnProperty(
                     "times_pause",
                   )
                 ) {
-                  videoInteractionMap[videoInteractionID]["times_pause"] =
-                    videoInteractionMap[videoInteractionID]["times_pause"] + 1;
-                  videoInteractionMap[videoInteractionID]["duration_pause"] =
-                    videoInteractionMap[videoInteractionID]["duration_pause"] +
+                  videoInteractionMap[videoInteractionId]["times_pause"] =
+                    videoInteractionMap[videoInteractionId]["times_pause"] + 1;
+                  videoInteractionMap[videoInteractionId]["duration_pause"] =
+                    videoInteractionMap[videoInteractionId]["duration_pause"] +
                     durationPause;
                 } else {
-                  videoInteractionMap[videoInteractionID]["times_pause"] = 1;
-                  videoInteractionMap[videoInteractionID]["duration_pause"] =
+                  videoInteractionMap[videoInteractionId]["times_pause"] = 1;
+                  videoInteractionMap[videoInteractionId]["duration_pause"] =
                     durationPause;
                 }
               }
@@ -594,101 +591,103 @@ async function processVideoInteractionSessions(courseRunName, logFiles, bar) {
         }
       }
     }
-    bar.increment();
-  }
 
-  let videoInteractionRecord = [];
-  for (let interactionId in videoInteractionMap) {
-    const videoInteractionId = interactionId,
-      courseLearnerId = videoInteractionMap[interactionId]["course_learner_id"],
-      videoId = videoInteractionMap[interactionId]["video_id"],
-      duration = videoInteractionMap[interactionId]["watch_duration"],
-      timesForwardSeek =
-        videoInteractionMap[interactionId]["times_forward_seek"],
-      durationForwardSeek =
-        videoInteractionMap[interactionId]["duration_forward_seek"],
-      timesBackwardSeek =
-        videoInteractionMap[interactionId]["times_backward_seek"],
-      durationBackwardSeek =
-        videoInteractionMap[interactionId]["duration_backward_seek"],
-      timesSpeedUp = videoInteractionMap[interactionId]["times_speed_up"],
-      timesSpeedDown = videoInteractionMap[interactionId]["times_speed_down"],
-      startTime = videoInteractionMap[interactionId]["start_time"],
-      endTime = videoInteractionMap[interactionId]["end_time"];
+    let videoInteractionRecord = [];
+    for (let interactionId in videoInteractionMap) {
+      const videoInteractionId = interactionId,
+        courseLearnerId =
+          videoInteractionMap[interactionId]["course_learner_id"],
+        videoId = videoInteractionMap[interactionId]["video_id"],
+        duration = videoInteractionMap[interactionId]["watch_duration"],
+        timesForwardSeek =
+          videoInteractionMap[interactionId]["times_forward_seek"],
+        durationForwardSeek =
+          videoInteractionMap[interactionId]["duration_forward_seek"],
+        timesBackwardSeek =
+          videoInteractionMap[interactionId]["times_backward_seek"],
+        durationBackwardSeek =
+          videoInteractionMap[interactionId]["duration_backward_seek"],
+        timesSpeedUp = videoInteractionMap[interactionId]["times_speed_up"],
+        timesSpeedDown = videoInteractionMap[interactionId]["times_speed_down"],
+        startTime = videoInteractionMap[interactionId]["start_time"],
+        endTime = videoInteractionMap[interactionId]["end_time"];
 
-    let timesPause = 0,
-      durationPause = 0;
+      let timesPause = 0,
+        durationPause = 0;
 
-    if (videoInteractionMap[interactionId].hasOwnProperty("times_pause")) {
-      timesPause = videoInteractionMap[interactionId]["times_pause"];
-      durationPause = videoInteractionMap[interactionId]["duration_pause"];
-    }
-
-    videoInteractionMap[videoInteractionId]["session_id"] = videoInteractionId;
-    videoInteractionMap[videoInteractionId]["times_pause"] = timesPause;
-    videoInteractionMap[videoInteractionId]["duration_pause"] = durationPause;
-
-    let array = [
-      videoInteractionId,
-      courseLearnerId,
-      videoId,
-      duration,
-      timesForwardSeek,
-      durationForwardSeek,
-      timesBackwardSeek,
-      durationBackwardSeek,
-      timesSpeedUp,
-      timesSpeedDown,
-      timesPause,
-      durationPause,
-      startTime,
-      endTime,
-    ];
-    array = array.map(function (value) {
-      if (typeof value === "number") {
-        return Math.round(value);
-      } else {
-        return value;
+      if (videoInteractionMap[interactionId].hasOwnProperty("times_pause")) {
+        timesPause = videoInteractionMap[interactionId]["times_pause"];
+        durationPause = videoInteractionMap[interactionId]["duration_pause"];
       }
-    });
-    videoInteractionRecord.push(videoInteractionMap[videoInteractionId]);
-  }
-  if (videoInteractionRecord.length > 0) {
-    let data = [];
-    for (let array of videoInteractionRecord) {
-      const interactionId = array[0],
-        courseLearnerId = array[1],
-        videoId = array[2],
-        duration = processNull(array[3]),
-        timesForwardSeek = processNull(array[4]),
-        durationForwardSeek = processNull(array[5]),
-        timesBackwardSeek = processNull(array[6]),
-        durationBackwardSeek = processNull(array[7]),
-        timesSpeedUp = processNull(array[8]),
-        timesSpeedDown = processNull(array[9]),
-        timesPause = processNull(array[10]),
-        durationPause = processNull(array[11]),
-        startTime = array[12],
-        endTime = array[13];
-      let values = {
-        interaction_id: interactionId,
-        course_learner_id: courseLearnerId,
-        video_id: videoId,
-        duration: duration,
-        times_forward_seek: timesForwardSeek,
-        duration_forward_seek: durationForwardSeek,
-        times_backward_seek: timesBackwardSeek,
-        duration_backward_seek: durationBackwardSeek,
-        times_speed_up: timesSpeedUp,
-        times_speed_down: timesSpeedDown,
-        times_pause: timesPause,
-        duration_pause: durationPause,
-        start_time: startTime,
-        end_time: endTime,
-      };
-      data.push(values);
+
+      videoInteractionMap[videoInteractionId]["session_id"] =
+        videoInteractionId;
+      videoInteractionMap[videoInteractionId]["times_pause"] = timesPause;
+      videoInteractionMap[videoInteractionId]["duration_pause"] = durationPause;
+
+      let array = [
+        videoInteractionId,
+        courseLearnerId,
+        videoId,
+        duration,
+        timesForwardSeek,
+        durationForwardSeek,
+        timesBackwardSeek,
+        durationBackwardSeek,
+        timesSpeedUp,
+        timesSpeedDown,
+        timesPause,
+        durationPause,
+        startTime,
+        endTime,
+      ];
+      array = array.map(function (value) {
+        if (typeof value === "number") {
+          return Math.round(value);
+        } else {
+          return value;
+        }
+      });
+      videoInteractionRecord.push(videoInteractionMap[videoInteractionId]);
     }
-    await mongoInsert("video_interactions", data);
+    if (videoInteractionRecord.length > 0) {
+      let data = [];
+      for (let array of videoInteractionRecord) {
+        const interactionId = array[0],
+          courseLearnerId = array[1],
+          videoId = array[2],
+          duration = processNull(array[3]),
+          timesForwardSeek = processNull(array[4]),
+          durationForwardSeek = processNull(array[5]),
+          timesBackwardSeek = processNull(array[6]),
+          durationBackwardSeek = processNull(array[7]),
+          timesSpeedUp = processNull(array[8]),
+          timesSpeedDown = processNull(array[9]),
+          timesPause = processNull(array[10]),
+          durationPause = processNull(array[11]),
+          startTime = array[12],
+          endTime = array[13];
+        let values = {
+          interaction_id: interactionId,
+          course_learner_id: courseLearnerId,
+          video_id: videoId,
+          duration: duration,
+          times_forward_seek: timesForwardSeek,
+          duration_forward_seek: durationForwardSeek,
+          times_backward_seek: timesBackwardSeek,
+          duration_backward_seek: durationBackwardSeek,
+          times_speed_up: timesSpeedUp,
+          times_speed_down: timesSpeedDown,
+          times_pause: timesPause,
+          duration_pause: durationPause,
+          start_time: startTime,
+          end_time: endTime,
+        };
+        data.push(values);
+      }
+      await mongoInsert("video_interactions", data);
+    }
+    bar.increment();
   }
 }
 
@@ -714,9 +713,9 @@ async function processAssessmentsSubmissions(courseRunName, logFiles, bar) {
 
   let submissionEventCollection = ["problem_check"];
 
-  const submissionData = [],
-    assessmentData = [];
   for (let i = 0; i < logFiles.length; i++) {
+    let submissionData = [],
+      assessmentData = [];
     const logFile = logFiles[i];
     for await (const line of readLines(logFile)) {
       let jsonObject = JSON.parse(line);
@@ -765,14 +764,13 @@ async function processAssessmentsSubmissions(courseRunName, logFiles, bar) {
         }
       }
     }
+    if (assessmentData.length > 0) {
+      await mongoInsert("assessments", assessmentData);
+    }
+    if (submissionData.length > 0) {
+      await mongoInsert("submissions", submissionData);
+    }
     bar.increment();
-  }
-
-  if (assessmentData.length > 0) {
-    await mongoInsert("assessments", assessmentData);
-  }
-  if (submissionData.length > 0) {
-    await mongoInsert("submissions", submissionData);
   }
 }
 
@@ -795,17 +793,15 @@ async function processQuizSessions(courseRunName, logFiles, bar) {
     courseId.lastIndexOf("+") + 7,
   );
 
-  let childParentMap = courseMetadataMap["child_parent_map"],
-    learnerAllEventLogs = {},
-    updatedLearnerAllEventLogs = {},
-    quizSessions = {};
+  let childParentMap = courseMetadataMap["child_parent_map"];
 
   for (let i = 0; i < logFiles.length; i++) {
     const logFile = logFiles[i];
 
-    (learnerAllEventLogs = {}),
-      (updatedLearnerAllEventLogs = {}),
-      (quizSessions = {});
+    let learnerAllEventLogs = {},
+      updatedLearnerAllEventLogs = {},
+      quizSessions = {};
+
     let courseLearnerIdSet = new Set();
     if (learnerAllEventLogs.length > 0) {
       for (const courseLearnerId of learnerAllEventLogs) {
@@ -1005,130 +1001,130 @@ async function processQuizSessions(courseRunName, logFiles, bar) {
         updatedLearnerAllEventLogs[courseLearnerId] = newLogs;
       }
     }
-    bar.increment();
-  }
-
-  for (let sessionId in quizSessions) {
-    if (!quizSessions.hasOwnProperty(sessionId)) {
-      continue;
+    for (let sessionId in quizSessions) {
+      if (!quizSessions.hasOwnProperty(sessionId)) {
+        continue;
+      }
+      if (Object.keys(quizSessions[sessionId]["time_array"]).length > 1) {
+        let startTime = null;
+        let endTime = null;
+        let updatedTimeArray = [];
+        for (
+          let i = 0;
+          i < Object.keys(quizSessions[sessionId]["time_array"]).length;
+          i++
+        ) {
+          let verificationTime = new Date(endTime);
+          if (i === 0) {
+            startTime = new Date(
+              quizSessions[sessionId]["time_array"][i]["start_time"],
+            );
+            endTime = new Date(
+              quizSessions[sessionId]["time_array"][i]["end_time"],
+            );
+          } else if (
+            new Date(quizSessions[sessionId]["time_array"][i]["start_time"]) >
+            verificationTime.setMinutes(verificationTime.getMinutes() + 30)
+          ) {
+            updatedTimeArray.push({
+              start_time: startTime,
+              end_time: endTime,
+            });
+            startTime = new Date(
+              quizSessions[sessionId]["time_array"][i]["start_time"],
+            );
+            endTime = new Date(
+              quizSessions[sessionId]["time_array"][i]["end_time"],
+            );
+            if (
+              i ===
+              Object.keys(quizSessions[sessionId]["time_array"]).length - 1
+            ) {
+              updatedTimeArray.push({
+                start_time: startTime,
+                end_time: endTime,
+              });
+            }
+          } else {
+            endTime = new Date(
+              quizSessions[sessionId]["time_array"][i]["end_time"],
+            );
+            if (
+              i ===
+              Object.keys(quizSessions[sessionId]["time_array"]).length - 1
+            ) {
+              updatedTimeArray.push({
+                start_time: startTime,
+                end_time: endTime,
+              });
+            }
+          }
+        }
+        quizSessions[sessionId]["time_array"] = updatedTimeArray;
+      }
     }
-    if (Object.keys(quizSessions[sessionId]["time_array"]).length > 1) {
-      let startTime = null;
-      let endTime = null;
-      let updatedTimeArray = [];
+
+    let quizSessionRecord = [];
+    for (let sessionId in quizSessions) {
+      if (!quizSessions.hasOwnProperty(sessionId)) {
+        continue;
+      }
+      let courseLearnerId = quizSessions[sessionId]["course_learner_id"];
       for (
         let i = 0;
         i < Object.keys(quizSessions[sessionId]["time_array"]).length;
         i++
       ) {
-        let verificationTime = new Date(endTime);
-        if (i === 0) {
-          startTime = new Date(
-            quizSessions[sessionId]["time_array"][i]["start_time"],
-          );
-          endTime = new Date(
-            quizSessions[sessionId]["time_array"][i]["end_time"],
-          );
-        } else if (
-          new Date(quizSessions[sessionId]["time_array"][i]["start_time"]) >
-          verificationTime.setMinutes(verificationTime.getMinutes() + 30)
-        ) {
-          updatedTimeArray.push({
-            start_time: startTime,
-            end_time: endTime,
-          });
-          startTime = new Date(
-            quizSessions[sessionId]["time_array"][i]["start_time"],
-          );
-          endTime = new Date(
-            quizSessions[sessionId]["time_array"][i]["end_time"],
-          );
-          if (
-            i ===
-            Object.keys(quizSessions[sessionId]["time_array"]).length - 1
-          ) {
-            updatedTimeArray.push({
-              start_time: startTime,
-              end_time: endTime,
-            });
-          }
-        } else {
-          endTime = new Date(
-            quizSessions[sessionId]["time_array"][i]["end_time"],
-          );
-          if (
-            i ===
-            Object.keys(quizSessions[sessionId]["time_array"]).length - 1
-          ) {
-            updatedTimeArray.push({
-              start_time: startTime,
-              end_time: endTime,
-            });
+        let startTime = new Date(
+          quizSessions[sessionId]["time_array"][i]["start_time"],
+        );
+        let endTime = new Date(
+          quizSessions[sessionId]["time_array"][i]["end_time"],
+        );
+        if (startTime < endTime) {
+          let duration = (endTime - startTime) / 1000;
+          let finalSessionId =
+            sessionId + "_" + startTime.getTime() + "_" + endTime.getTime();
+          if (duration > 5) {
+            let array = [
+              finalSessionId,
+              courseLearnerId,
+              startTime,
+              endTime,
+              duration,
+            ];
+            quizSessionRecord.push(array);
           }
         }
       }
-      quizSessions[sessionId]["time_array"] = updatedTimeArray;
     }
-  }
+    if (quizSessionRecord.length > 0) {
+      let data = [];
+      for (let array of quizSessionRecord) {
+        let sessionId = array[0];
+        if (chunk !== 0) {
+          sessionId = sessionId + "_" + chunk;
+        }
+        if (index !== 0) {
+          sessionId = sessionId + "_" + index;
+        }
+        let courseLearnerId = array[1];
+        let startTime = array[2];
+        let endTime = array[3];
+        let duration = processNull(array[4]);
+        let values = {
+          sessionId: sessionId,
+          course_learner_id: courseLearnerId,
+          start_time: startTime,
+          end_time: endTime,
+          duration: duration,
+        };
+        data.push(values);
+      }
+      await mongoInsert("quiz_sessions", data);
+    }
 
-  let quizSessionRecord = [];
-  for (let sessionId in quizSessions) {
-    if (!quizSessions.hasOwnProperty(sessionId)) {
-      continue;
-    }
-    let courseLearnerId = quizSessions[sessionId]["course_learner_id"];
-    for (
-      let i = 0;
-      i < Object.keys(quizSessions[sessionId]["time_array"]).length;
-      i++
-    ) {
-      let startTime = new Date(
-        quizSessions[sessionId]["time_array"][i]["start_time"],
-      );
-      let endTime = new Date(
-        quizSessions[sessionId]["time_array"][i]["end_time"],
-      );
-      if (startTime < endTime) {
-        let duration = (endTime - startTime) / 1000;
-        let finalSessionId =
-          sessionId + "_" + startTime.getTime() + "_" + endTime.getTime();
-        if (duration > 5) {
-          let array = [
-            finalSessionId,
-            courseLearnerId,
-            startTime,
-            endTime,
-            duration,
-          ];
-          quizSessionRecord.push(array);
-        }
-      }
-    }
-  }
-  if (quizSessionRecord.length > 0) {
-    let data = [];
-    for (let array of quizSessionRecord) {
-      let sessionId = array[0];
-      if (chunk !== 0) {
-        sessionId = sessionId + "_" + chunk;
-      }
-      if (index !== 0) {
-        sessionId = sessionId + "_" + index;
-      }
-      let courseLearnerId = array[1];
-      let startTime = array[2];
-      let endTime = array[3];
-      let duration = processNull(array[4]);
-      let values = {
-        sessionId: sessionId,
-        course_learner_id: courseLearnerId,
-        start_time: startTime,
-        end_time: endTime,
-        duration: duration,
-      };
-      data.push(values);
-    }
-    await mongoInsert("quiz_sessions", data);
+    bar.increment();
   }
 }
 
@@ -1182,18 +1178,19 @@ async function processORASessions(courseRunName, logFiles, bar) {
 
   const currentDate = courseMetadataMap["start_date"];
 
-  let childParentMap = courseMetadataMap["child_parent_map"],
-    learnerAllEventLogs = {},
-    updatedLearnerAllEventLogs = {},
-    oraSessions = {},
-    oraEvents = {},
-    oraSessionsRecord = [];
+  let childParentMap = courseMetadataMap["child_parent_map"];
+
+  let learnerAllEventLogs = {};
+  let updatedLearnerAllEventLogs = {};
 
   for (let i = 0; i < logFiles.length; i++) {
-    const logFile = logFiles[i];
-    learnerAllEventLogs = {};
     learnerAllEventLogs = updatedLearnerAllEventLogs;
-    updatedLearnerAllEventLogs = {};
+    (updatedLearnerAllEventLogs = {}),
+      (oraSessions = {}),
+      (oraEvents = {}),
+      (oraSessionsRecord = []);
+
+    const logFile = logFiles[i];
     let courseLearnerIdSet = new Set();
     for (const courseLearnerId in learnerAllEventLogs) {
       courseLearnerIdSet.add(courseLearnerId);
@@ -1428,36 +1425,36 @@ async function processORASessions(courseRunName, logFiles, bar) {
         oraEvents[courseLearnerId] = learnerOraEvents;
       }
     }
-    bar.increment();
-  }
-  if (oraSessionsRecord.length > 0) {
-    let data = [];
-    for (let array of oraSessionsRecord) {
-      let sessionId = array[0];
-      const courseLearnerId = array[1],
-        saveCount = processNull(array[2]),
-        peerAssessmentCount = array[3],
-        submitted = array[4],
-        selfAssessed = array[5],
-        startTime = array[6],
-        endTime = array[7],
-        duration = processNull(array[8]),
-        elementId = array[9];
-      let values = {
-        sessionId: sessionId,
-        course_learner_id: courseLearnerId,
-        times_save: saveCount,
-        times_peer_assess: peerAssessmentCount,
-        submitted: submitted,
-        self_assessed: selfAssessed,
-        start_time: startTime,
-        end_time: endTime,
-        duration: duration,
-        assessment_id: elementId,
-      };
-      data.push(values);
+    if (oraSessionsRecord.length > 0) {
+      let data = [];
+      for (let array of oraSessionsRecord) {
+        let sessionId = array[0];
+        const courseLearnerId = array[1],
+          saveCount = processNull(array[2]),
+          peerAssessmentCount = array[3],
+          submitted = array[4],
+          selfAssessed = array[5],
+          startTime = array[6],
+          endTime = array[7],
+          duration = processNull(array[8]),
+          elementId = array[9];
+        let values = {
+          sessionId: sessionId,
+          course_learner_id: courseLearnerId,
+          times_save: saveCount,
+          times_peer_assess: peerAssessmentCount,
+          submitted: submitted,
+          self_assessed: selfAssessed,
+          start_time: startTime,
+          end_time: endTime,
+          duration: duration,
+          assessment_id: elementId,
+        };
+        data.push(values);
+      }
+      mongoInsert("ora_sessions", data);
     }
-    mongoInsert("ora_sessions", data);
+    bar.increment();
   }
 }
 
