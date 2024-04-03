@@ -651,41 +651,7 @@ async function processVideoInteractionSessions(courseRunName, logFiles, bar) {
       videoInteractionRecord.push(videoInteractionMap[videoInteractionId]);
     }
     if (videoInteractionRecord.length > 0) {
-      let data = [];
-      for (let array of videoInteractionRecord) {
-        const interactionId = array[0],
-          courseLearnerId = array[1],
-          videoId = array[2],
-          duration = processNull(array[3]),
-          timesForwardSeek = processNull(array[4]),
-          durationForwardSeek = processNull(array[5]),
-          timesBackwardSeek = processNull(array[6]),
-          durationBackwardSeek = processNull(array[7]),
-          timesSpeedUp = processNull(array[8]),
-          timesSpeedDown = processNull(array[9]),
-          timesPause = processNull(array[10]),
-          durationPause = processNull(array[11]),
-          startTime = array[12],
-          endTime = array[13];
-        let values = {
-          interaction_id: interactionId,
-          course_learner_id: courseLearnerId,
-          video_id: videoId,
-          duration: duration,
-          times_forward_seek: timesForwardSeek,
-          duration_forward_seek: durationForwardSeek,
-          times_backward_seek: timesBackwardSeek,
-          duration_backward_seek: durationBackwardSeek,
-          times_speed_up: timesSpeedUp,
-          times_speed_down: timesSpeedDown,
-          times_pause: timesPause,
-          duration_pause: durationPause,
-          start_time: startTime,
-          end_time: endTime,
-        };
-        data.push(values);
-      }
-      await mongoInsert("video_interactions", data);
+      await mongoInsert("video_interactions", videoInteractionRecord);
     }
     bar.increment();
   }

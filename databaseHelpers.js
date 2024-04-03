@@ -2,7 +2,9 @@ const { MongoClient } = require("mongodb");
 const credentials = require("./credentials");
 
 // Database Name
-const dbName = "edx_test";
+const prodDbName = "edx_test";
+const testingDbName = "edx_testing";
+const isTesting = true;
 const username = encodeURIComponent(credentials.admin.user);
 const password = encodeURIComponent(credentials.admin.pwd);
 const mogodb_url = credentials.mongodb_url;
@@ -12,7 +14,8 @@ const dev = true;
 const url = `mongodb://${mogodb_url}`;
 // const url = `mongodb://${username}:${password}@${mogodb_url}`;
 
-async function testConnection() {
+async function testConnection(testing = false) {
+  const dbName = testing ? testingDbName : prodDbName;
   const client = new MongoClient(url);
   try {
     await client.connect();
@@ -30,7 +33,8 @@ async function testConnection() {
   }
 }
 
-async function mongoInsert(collectionName, dataRows) {
+async function mongoInsert(collectionName, dataRows, testing = isTesting) {
+  const dbName = testing ? testingDbName : prodDbName;
   const client = new MongoClient(url);
   try {
     await client.connect();
@@ -38,7 +42,16 @@ async function mongoInsert(collectionName, dataRows) {
 
     for (let v of dataRows) {
       for (let field of Object.keys(v)) {
-        if (field.includes("time")) {
+        if (
+          [
+            "start_time",
+            "end_time",
+            "event_time",
+            "register_time",
+            "time",
+            "submission_timestamp",
+          ].includes(field)
+        ) {
           let date = v[field];
           v[field] = new Date(date);
         }
@@ -52,7 +65,13 @@ async function mongoInsert(collectionName, dataRows) {
   }
 }
 
-async function mongoQuery(collectionName, query = {}, limit = 0) {
+async function mongoQuery(
+  collectionName,
+  query = {},
+  limit = 0,
+  testing = isTesting,
+) {
+  const dbName = testing ? testingDbName : prodDbName;
   const client = new MongoClient(url, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
@@ -72,7 +91,8 @@ async function mongoQuery(collectionName, query = {}, limit = 0) {
   }
 }
 
-async function deleteIfExists(collectionName) {
+async function deleteIfExists(collectionName, testing = isTesting) {
+  const dbName = testing ? testingDbName : prodDbName;
   const client = new MongoClient(url);
   try {
     await client.connect();
@@ -96,7 +116,8 @@ async function deleteIfExists(collectionName) {
   }
 }
 
-async function clearDatabase() {
+async function clearDatabase(testing = isTesting) {
+  const dbName = testing ? testingDbName : prodDbName;
   const client = new MongoClient(url);
   try {
     await client.connect();
@@ -113,7 +134,8 @@ async function clearDatabase() {
   }
 }
 
-async function clearSessionsCollections() {
+async function clearSessionsCollections(testing = isTesting) {
+  const dbName = testing ? testingDbName : prodDbName;
   // table names: sessions, video_interactions, assessments, submissions, quiz_sessions.
   const client = new MongoClient(url);
   try {

@@ -52,7 +52,7 @@ async function identifyLogFilesPerCourseRun(directoryPath, courses) {
       format:
         " {bar} | Identifying log files for {course_run} | {value}/{total} | Duration: {duration_formatted} | ETA: {eta_formatted}",
     },
-    cliProgress.Presets.shades_classic
+    cliProgress.Presets.shades_classic,
   );
 
   let logFilesPerCourseRun = {};
@@ -102,7 +102,7 @@ async function processSessionsForCourseRun(courseRunDirName, logFiles, bar) {
   await processGeneralSessions(
     courseRunDirName,
     logFiles,
-    processGeneralSessionsBar
+    processGeneralSessionsBar,
   );
   processGeneralSessionsBar.stop();
 
@@ -113,7 +113,7 @@ async function processSessionsForCourseRun(courseRunDirName, logFiles, bar) {
   await processVideoInteractionSessions(
     courseRunDirName,
     logFiles,
-    processVideoInteractionSessionsBar
+    processVideoInteractionSessionsBar,
   );
   processVideoInteractionSessionsBar.stop();
 
@@ -123,7 +123,7 @@ async function processSessionsForCourseRun(courseRunDirName, logFiles, bar) {
   });
   await processAssessmentsSubmissions(
     logFiles,
-    processAssessmentsSubmissionsBar
+    processAssessmentsSubmissionsBar,
   );
   processAssessmentsSubmissionsBar.stop();
 
@@ -153,17 +153,17 @@ async function processCourseRun(
   courseRunDirName,
   logFiles,
   coursesDirectory,
-  bar
+  bar,
 ) {
   await readMetadataFiles(
     path.join(coursesDirectory, courseRunDirName),
-    courseRunDirName
+    courseRunDirName,
   );
   await processSessionsForCourseRun(courseRunDirName, logFiles, bar);
 }
 
 async function main() {
-  const testing = false;
+  const testing = true;
 
   let courses = ["EX101x", "FP101x", "ST1x", "UnixTx"];
   let workingDirectory = "W:/staff-umbrella/gdicsmoocs/Working copy";
@@ -174,13 +174,13 @@ async function main() {
       "W:/staff-umbrella/gdicsmoocs/Working copy/scripts/testing";
   }
   try {
-    testConnection();
+    testConnection(testing);
 
-    await clearDatabase();
+    await clearDatabase(testing);
 
     const logFilesPerCourseRun = await identifyLogFilesPerCourseRun(
       workingDirectory,
-      courses
+      courses,
     );
 
     const logProcessingBar = new cliProgress.MultiBar(
@@ -190,7 +190,7 @@ async function main() {
         format:
           " {bar} | Processing {task} for {course_run} | {value}/{total} | Duration: {duration_formatted} | ETA: {eta_formatted}",
       },
-      cliProgress.Presets.shades_grey
+      cliProgress.Presets.shades_grey,
     );
 
     for (let courseRunDirName in logFilesPerCourseRun) {
@@ -199,7 +199,7 @@ async function main() {
         courseRunDirName,
         logFiles,
         workingDirectory,
-        logProcessingBar
+        logProcessingBar,
       );
     }
 
