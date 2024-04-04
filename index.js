@@ -44,18 +44,6 @@ async function isValidGzipFile(filePath) {
  */
 async function identifyLogFilesPerCourseRun(coursesDirectory, courses) {
   const fileEnding = ".log.gz";
-  const identifyLogFilesBar = new cliProgress.MultiBar(
-    {
-      hideCursor: true,
-      barsize: 20,
-      etaBuffer: 20,
-      forceRedraw: true,
-      clearOnComplete: true,
-      format:
-        " {bar} | Identifying and verifying log files for {course_run} | {value}/{total} | Duration: {duration_formatted} | ETA: {eta_formatted}",
-    },
-    cliProgress.Presets.shades_classic
-  );
 
   let logFilesPerCourseRun = {};
   let warnings = [];
@@ -75,16 +63,21 @@ async function identifyLogFilesPerCourseRun(coursesDirectory, courses) {
 
     let courseFiles = await fs.promises.readdir(courseDirectory);
     let totalFiles = courseFiles.length;
-    let courseRunBar = identifyLogFilesBar.create(
-      totalFiles,
-      0,
+    let courseRunBar = new cliProgress.SingleBar(
       {
-        course_run: courseDirectoryName,
-      },
-      {
+        total: totalFiles,
+        hideCursor: true,
+        barsize: 40,
+        etaBuffer: 20,
+        forceRedraw: true,
+        format:
+          "{bar} | Identifying and verifying log files for {course_run} | {value}/{total} | Duration: {duration_formatted} | ETA: {eta_formatted}",
         clearOnComplete: true,
-      }
+      },
+      cliProgress.Presets.shades_classic
     );
+
+    courseRunBar.start(totalFiles, 0, { course_run: courseDirectoryName });
 
     let files = [];
     for (let fileName of courseFiles) {
@@ -104,13 +97,16 @@ async function identifyLogFilesPerCourseRun(coursesDirectory, courses) {
     }
 
     logFilesPerCourseRun[courseDirectoryName] = files;
+
     courseRunBar.stop();
   }
 
-  identifyLogFilesBar.stop();
-
   for (let warning of warnings) {
     console.warn(warning);
+  }
+
+  if (warnings.length > 0) {
+    console.log("\n");
   }
 
   return logFilesPerCourseRun;
@@ -125,7 +121,7 @@ async function processSessionsForCourseRun(courseRunDirName, logFiles) {
   const sessionsBar = new cliProgress.SingleBar(
     {
       hideCursor: true,
-      barsize: 20,
+      barsize: 40,
       etaBuffer: 20,
       forceRedraw: true,
       clearOnComplete: true,
