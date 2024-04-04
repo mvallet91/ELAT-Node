@@ -3,19 +3,18 @@ const credentials = require("./credentials");
 
 // Database Name
 const prodDbName = "edx_test";
-const testingDbName = "edx_testing";
-const isTesting = false;
+const devDbName = "edx_testing";
 const username = encodeURIComponent(credentials.admin.user);
 const password = encodeURIComponent(credentials.admin.pwd);
 const mogodb_url = credentials.mongodb_url;
 
-const dev = true;
+const dev = false;
 
 const url = `mongodb://${mogodb_url}`;
 // const url = `mongodb://${username}:${password}@${mogodb_url}`;
 
-async function testConnection(testing = false) {
-  const dbName = testing ? testingDbName : prodDbName;
+async function testConnection(testing = dev) {
+  const dbName = testing ? devDbName : prodDbName;
   const client = new MongoClient(url);
   try {
     await client.connect();
@@ -24,7 +23,7 @@ async function testConnection(testing = false) {
     const collections = await db.collections();
     console.log(
       "Collections in the database:",
-      collections.map((c) => c.collectionName),
+      collections.map((c) => c.collectionName)
     );
   } catch (err) {
     console.error("Connection failed:", err);
@@ -33,8 +32,8 @@ async function testConnection(testing = false) {
   }
 }
 
-async function mongoInsert(collectionName, dataRows, testing = isTesting) {
-  const dbName = testing ? testingDbName : prodDbName;
+async function mongoInsert(collectionName, dataRows, testing = dev) {
+  const dbName = testing ? devDbName : prodDbName;
   const client = new MongoClient(url);
   try {
     await client.connect();
@@ -69,9 +68,9 @@ async function mongoQuery(
   collectionName,
   query = {},
   limit = 0,
-  testing = isTesting,
+  testing = dev
 ) {
-  const dbName = testing ? testingDbName : prodDbName;
+  const dbName = testing ? devDbName : prodDbName;
   const client = new MongoClient(url, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
@@ -91,8 +90,8 @@ async function mongoQuery(
   }
 }
 
-async function deleteIfExists(collectionName, testing = isTesting) {
-  const dbName = testing ? testingDbName : prodDbName;
+async function deleteIfExists(collectionName, testing = dev) {
+  const dbName = testing ? devDbName : prodDbName;
   const client = new MongoClient(url);
   try {
     await client.connect();
@@ -109,15 +108,15 @@ async function deleteIfExists(collectionName, testing = isTesting) {
   } catch (err) {
     console.error(
       `An error occurred while checking/deleting collection ${collectionName}:`,
-      err,
+      err
     );
   } finally {
     await client.close();
   }
 }
 
-async function clearDatabase(testing = isTesting) {
-  const dbName = testing ? testingDbName : prodDbName;
+async function clearDatabase(testing = dev) {
+  const dbName = testing ? devDbName : prodDbName;
   const client = new MongoClient(url);
   try {
     await client.connect();
@@ -126,7 +125,7 @@ async function clearDatabase(testing = isTesting) {
     for (let collection of collections) {
       await db.collection(collection.collectionName).drop();
     }
-    console.log("Cleared database");
+    console.log("Cleared database\n");
   } catch (err) {
     console.error("An error occurred while clearing the database:", err);
   } finally {
@@ -134,8 +133,8 @@ async function clearDatabase(testing = isTesting) {
   }
 }
 
-async function clearSessionsCollections(testing = isTesting) {
-  const dbName = testing ? testingDbName : prodDbName;
+async function clearSessionsCollections(testing = dev) {
+  const dbName = testing ? devDbName : prodDbName;
   // table names: sessions, video_interactions, assessments, submissions, quiz_sessions.
   const client = new MongoClient(url);
   try {
@@ -157,7 +156,7 @@ async function clearSessionsCollections(testing = isTesting) {
   } catch (err) {
     console.error(
       "An error occurred while clearing the sessions collections:",
-      err,
+      err
     );
   } finally {
     await client.close();

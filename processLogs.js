@@ -21,9 +21,8 @@ async function* readLines(logFile) {
  * process their values, like start, end and duration, and finally store them in the database
  * @param {string} courseRunName - The name of the course run
  * @param {string[]} logFiles - The list of log files to process
- * @param {cliProgress.SingleBar} bar - The progress bar
  */
-async function processGeneralSessions(courseRunName, logFiles, bar) {
+async function processGeneralSessions(courseRunName, logFiles) {
   let courseMetadataMap = await mongoQuery("metadata", {
     name: courseRunName,
   });
@@ -32,7 +31,7 @@ async function processGeneralSessions(courseRunName, logFiles, bar) {
   let currentCourseId = courseMetadataMap["course_id"];
   currentCourseId = currentCourseId.slice(
     currentCourseId.indexOf("+") + 1,
-    currentCourseId.lastIndexOf("+") + 7,
+    currentCourseId.lastIndexOf("+") + 7
   );
 
   for (let i = 0; i < logFiles.length; i++) {
@@ -41,7 +40,7 @@ async function processGeneralSessions(courseRunName, logFiles, bar) {
     let sessionRecord = [];
     const logFile = logFiles[i];
     learnerAllEventLogs = JSON.parse(
-      JSON.stringify(updatedLearnerAllEventLogs),
+      JSON.stringify(updatedLearnerAllEventLogs)
     );
 
     let courseLearnerIdSet = new Set();
@@ -204,7 +203,6 @@ async function processGeneralSessions(courseRunName, logFiles, bar) {
       }
       await mongoInsert("sessions", data);
     }
-    bar.increment();
   }
 }
 
@@ -213,9 +211,8 @@ async function processGeneralSessions(courseRunName, logFiles, bar) {
  * process their values, like duration and times they search, to finally store them in the database
  * @param {string} courseRunName - The name of the course run
  * @param {Array} logFiles - The list of log files
- * @param {cliProgress.SingleBar} bar - The progress bar
  */
-async function processVideoInteractionSessions(courseRunName, logFiles, bar) {
+async function processVideoInteractionSessions(courseRunName, logFiles) {
   let courseMetadataMap = await mongoQuery("metadata", {
     name: courseRunName,
   });
@@ -224,7 +221,7 @@ async function processVideoInteractionSessions(courseRunName, logFiles, bar) {
   const courseId = courseMetadataMap["course_id"],
     currentCourseId = courseId.slice(
       courseId.indexOf("+") + 1,
-      courseId.lastIndexOf("+") + 7,
+      courseId.lastIndexOf("+") + 7
     );
 
   const videoEventTypes = [
@@ -420,7 +417,7 @@ async function processVideoInteractionSessions(courseRunName, logFiles, bar) {
                 if (
                   Object.prototype.hasOwnProperty.call(
                     videoInteractionMap[videoInteractionId],
-                    "times_pause",
+                    "times_pause"
                   )
                 ) {
                   videoInteractionMap[videoInteractionId]["times_pause"] =
@@ -451,7 +448,7 @@ async function processVideoInteractionSessions(courseRunName, logFiles, bar) {
             // Seek
             if (
               ["seek_video", "edx.video.position.changed"].includes(
-                log["event_type"],
+                log["event_type"]
               ) &&
               videoId === log["video_id"]
             ) {
@@ -613,7 +610,7 @@ async function processVideoInteractionSessions(courseRunName, logFiles, bar) {
       if (
         Object.prototype.hasOwnProperty.call(
           videoInteractionMap[interactionId],
-          "times_pause",
+          "times_pause"
         )
       ) {
         timesPause = videoInteractionMap[interactionId]["times_pause"];
@@ -653,18 +650,15 @@ async function processVideoInteractionSessions(courseRunName, logFiles, bar) {
     if (videoInteractionRecord.length > 0) {
       await mongoInsert("video_interactions", videoInteractionRecord);
     }
-    bar.increment();
   }
 }
 
 /**
  * This function will read the records in the log database and extract the submissions and (automatic) assessments
  * of quiz questions, process their values, like timestamp or grade, to finally store them in the database
- * @param {string} courseRunName - The name of the course run
  * @param {string[]} logFiles - The list of log files
- * @param {cliProgress.SingleBar} bar - The progress bar
  */
-async function processAssessmentsSubmissions(logFiles, bar) {
+async function processAssessmentsSubmissions(logFiles) {
   let submissionEventCollection = ["problem_check"];
 
   for (let i = 0; i < logFiles.length; i++) {
@@ -724,7 +718,6 @@ async function processAssessmentsSubmissions(logFiles, bar) {
     if (submissionData.length > 0) {
       await mongoInsert("submissions", submissionData);
     }
-    bar.increment();
   }
 }
 
@@ -733,9 +726,8 @@ async function processAssessmentsSubmissions(logFiles, bar) {
  * of quiz questions, process their values, like timestamp or grade, to finally store them in the database
  * @param {string} courseRunName - The name of the course run
  * @param {string[]} logFiles - The list of log files
- * @param {cliProgress.SingleBar} bar - The progress bar
  */
-async function processQuizSessions(courseRunName, logFiles, bar) {
+async function processQuizSessions(courseRunName, logFiles) {
   let courseMetadataMap = await mongoQuery("metadata", {
     name: courseRunName,
   });
@@ -743,7 +735,7 @@ async function processQuizSessions(courseRunName, logFiles, bar) {
   const courseId = courseMetadataMap["course_id"];
   const currentCourseId = courseId.slice(
     courseId.indexOf("+") + 1,
-    courseId.lastIndexOf("+") + 7,
+    courseId.lastIndexOf("+") + 7
   );
 
   let childParentMap = courseMetadataMap["child_parent_map"];
@@ -824,7 +816,7 @@ async function processQuizSessions(courseRunName, logFiles, bar) {
       if (
         !Object.prototype.hasOwnProperty.call(
           learnerAllEventLogs,
-          courseLearnerId,
+          courseLearnerId
         )
       ) {
         continue;
@@ -973,10 +965,10 @@ async function processQuizSessions(courseRunName, logFiles, bar) {
           let verificationTime = new Date(endTime);
           if (i === 0) {
             startTime = new Date(
-              quizSessions[sessionId]["time_array"][i]["start_time"],
+              quizSessions[sessionId]["time_array"][i]["start_time"]
             );
             endTime = new Date(
-              quizSessions[sessionId]["time_array"][i]["end_time"],
+              quizSessions[sessionId]["time_array"][i]["end_time"]
             );
           } else if (
             new Date(quizSessions[sessionId]["time_array"][i]["start_time"]) >
@@ -987,10 +979,10 @@ async function processQuizSessions(courseRunName, logFiles, bar) {
               end_time: endTime,
             });
             startTime = new Date(
-              quizSessions[sessionId]["time_array"][i]["start_time"],
+              quizSessions[sessionId]["time_array"][i]["start_time"]
             );
             endTime = new Date(
-              quizSessions[sessionId]["time_array"][i]["end_time"],
+              quizSessions[sessionId]["time_array"][i]["end_time"]
             );
             if (
               i ===
@@ -1003,7 +995,7 @@ async function processQuizSessions(courseRunName, logFiles, bar) {
             }
           } else {
             endTime = new Date(
-              quizSessions[sessionId]["time_array"][i]["end_time"],
+              quizSessions[sessionId]["time_array"][i]["end_time"]
             );
             if (
               i ===
@@ -1032,10 +1024,10 @@ async function processQuizSessions(courseRunName, logFiles, bar) {
         i++
       ) {
         let startTime = new Date(
-          quizSessions[sessionId]["time_array"][i]["start_time"],
+          quizSessions[sessionId]["time_array"][i]["start_time"]
         );
         let endTime = new Date(
-          quizSessions[sessionId]["time_array"][i]["end_time"],
+          quizSessions[sessionId]["time_array"][i]["end_time"]
         );
         if (startTime < endTime) {
           let duration = (endTime - startTime) / 1000;
@@ -1073,8 +1065,6 @@ async function processQuizSessions(courseRunName, logFiles, bar) {
       }
       await mongoInsert("quiz_sessions", data);
     }
-
-    bar.increment();
   }
 }
 
@@ -1113,9 +1103,8 @@ function getORAEventTypeAndElement(fullEvent) {
  *
  * @param {string} courseRunName The name of the course run
  * @param {string[]} logFiles The log files to be processed
- * @param {cliProgress.SingleBar} bar The progress bar
  */
-async function processORASessions(courseRunName, logFiles, bar) {
+async function processORASessions(courseRunName, logFiles) {
   let courseMetadataMap = await mongoQuery("metadata", {
     name: courseRunName,
   });
@@ -1123,7 +1112,7 @@ async function processORASessions(courseRunName, logFiles, bar) {
   const courseId = courseMetadataMap["course_id"];
   const currentCourseId = courseId.slice(
     courseId.indexOf("+") + 1,
-    courseId.lastIndexOf("+") + 7,
+    courseId.lastIndexOf("+") + 7
   );
 
   let learnerAllEventLogs = {};
@@ -1196,7 +1185,7 @@ async function processORASessions(courseRunName, logFiles, bar) {
             startTime = new Date(eventLogs[i]["event_time"]);
             endTime = new Date(eventLogs[i]["event_time"]);
             let eventDetails = getORAEventTypeAndElement(
-              eventLogs[i]["full_event"],
+              eventLogs[i]["full_event"]
             );
             currentElement = eventDetails.element;
             eventType = eventDetails.eventType;
@@ -1220,13 +1209,13 @@ async function processORASessions(courseRunName, logFiles, bar) {
             }
 
             learnerOraEvents.push(
-              "Empty id: " + currentStatus + "_" + meta + "_" + eventType,
+              "Empty id: " + currentStatus + "_" + meta + "_" + eventType
             );
           }
         } else {
           if (eventLogs[i]["event_type"].includes("openassessment")) {
             let eventDetails = getORAEventTypeAndElement(
-              eventLogs[i]["full_event"],
+              eventLogs[i]["full_event"]
             );
             currentElement = eventDetails.element;
             eventType = eventDetails.eventType;
@@ -1263,7 +1252,7 @@ async function processORASessions(courseRunName, logFiles, bar) {
                   "_" +
                   meta +
                   "_" +
-                  eventType,
+                  eventType
               );
 
               sessionId =
@@ -1291,7 +1280,7 @@ async function processORASessions(courseRunName, logFiles, bar) {
                   "_" +
                   meta +
                   "_" +
-                  eventType,
+                  eventType
               );
             } else {
               endTime = new Date(eventLogs[i]["event_time"]);
@@ -1311,7 +1300,7 @@ async function processORASessions(courseRunName, logFiles, bar) {
                 currentStatus = "assessingPeers";
               }
               learnerOraEvents.push(
-                "Under 30 min: " + currentStatus + "_" + meta + "_" + eventType,
+                "Under 30 min: " + currentStatus + "_" + meta + "_" + eventType
               );
             }
           } else {
@@ -1321,7 +1310,7 @@ async function processORASessions(courseRunName, logFiles, bar) {
                 "_" +
                 meta +
                 "_" +
-                eventType,
+                eventType
             );
 
             let verificationTime = new Date(endTime);
@@ -1395,7 +1384,6 @@ async function processORASessions(courseRunName, logFiles, bar) {
       }
       mongoInsert("ora_sessions", data);
     }
-    bar.increment();
   }
 }
 

@@ -32,62 +32,87 @@ async function isValidGzipFile(filePath) {
     await gunzip(fileBuffer);
     return true;
   } catch (error) {
-    console.warn(`${filePath} does not have a valid gzip header.`);
     return false;
   }
 }
 
 /**
  * Function that identifies the log files for each course run
- * @param {string} directoryPath The path to the directory containing the course run directories
+ * @param {string} coursesDirectory The path to the directory containing the course run directories
  * @param {string[]} courses The course names to look for
  * @returns {Object} An object with course run directory names as keys and an array of log file paths as values
  */
-async function identifyLogFilesPerCourseRun(directoryPath, courses) {
+async function identifyLogFilesPerCourseRun(coursesDirectory, courses) {
   const fileEnding = ".log.gz";
   const identifyLogFilesBar = new cliProgress.MultiBar(
     {
-      clearOnComplete: true,
       hideCursor: true,
       barsize: 20,
       etaBuffer: 20,
+      forceRedraw: true,
+      clearOnComplete: true,
       format:
-        " {bar} | Identifying log files for {course_run} | {value}/{total} | Duration: {duration_formatted} | ETA: {eta_formatted}",
+        " {bar} | Identifying and verifying log files for {course_run} | {value}/{total} | Duration: {duration_formatted} | ETA: {eta_formatted}",
     },
-    cliProgress.Presets.shades_classic,
+    cliProgress.Presets.shades_classic
   );
 
   let logFilesPerCourseRun = {};
-  let directories = await fs.promises.readdir(directoryPath);
-  for (let dirName of directories) {
-    if (courses.some((course) => dirName.includes(course))) {
-      let coursePath = path.join(path.resolve(directoryPath), dirName);
-      let files = [];
-      let fileNames = await fs.promises.readdir(coursePath);
-      const bar = identifyLogFilesBar.create(fileNames.length, 0, {
-        course_run: dirName,
-      });
-      for (let fileName of fileNames) {
-        if (fileName.endsWith(fileEnding)) {
-          const fullPath = path.join(coursePath, fileName);
-          if (await isValidGzipFile(fullPath)) {
-            files.push(fullPath);
-          } else {
-            console.warn(`Skipping invalid gzip file: ${fullPath}`);
-          }
-        }
-        bar.increment();
-      }
+  let warnings = [];
+  let directories = await fs.promises.readdir(coursesDirectory);
 
-      if (files.length === 0) {
-        console.warn(`No valid gzip log files found for ${dirName}`);
-      }
+  const courseDirectoryNames = directories.filter((dirName) =>
+    courses.some((course) => dirName.includes(course))
+  );
 
-      logFilesPerCourseRun[dirName] = files;
-      bar.stop();
+  for (let courseDirectoryName of courseDirectoryNames) {
+    const courseDirectory = path.join(coursesDirectory, courseDirectoryName);
+    const courseDirStats = await fs.promises.stat(courseDirectory);
+    if (!courseDirStats.isDirectory()) {
+      warnings.push(`${courseDirectoryName} is not a directory`);
+      continue;
     }
+
+    let courseFiles = await fs.promises.readdir(courseDirectory);
+    let totalFiles = courseFiles.length;
+    let courseRunBar = identifyLogFilesBar.create(
+      totalFiles,
+      0,
+      {
+        course_run: courseDirectoryName,
+      },
+      {
+        clearOnComplete: true,
+      }
+    );
+
+    let files = [];
+    for (let fileName of courseFiles) {
+      if (fileName.endsWith(fileEnding)) {
+        const fullPath = path.join(courseDirectory, fileName);
+        if (await isValidGzipFile(fullPath)) {
+          files.push(fullPath);
+        } else {
+          warnings.push(`Skipping invalid gzip file: ${fullPath}`);
+        }
+      }
+      courseRunBar.increment();
+    }
+
+    if (files.length === 0) {
+      warnings.push(`No valid gzip log files found for ${courseDirectoryName}`);
+    }
+
+    logFilesPerCourseRun[courseDirectoryName] = files;
+    courseRunBar.stop();
   }
+
   identifyLogFilesBar.stop();
+
+  for (let warning of warnings) {
+    console.warn(warning);
+  }
+
   return logFilesPerCourseRun;
 }
 
@@ -95,35 +120,42 @@ async function identifyLogFilesPerCourseRun(directoryPath, courses) {
  * Function that runs all the necessary functions to process the sessions for a course run
  * @param {string} courseRunDirName The name of the course run directory
  * @param {string[]} logFiles The log file paths for the course run
- * @param {cliProgress.SingleBar[]} courseRunBars The progress bars for this course run
  */
-async function processSessionsForCourseRun(
-  courseRunDirName,
-  logFiles,
-  courseRunBars,
-) {
-  await processGeneralSessions(courseRunDirName, logFiles, courseRunBars[0]);
-  courseRunBars[0].stop();
-
-  await processVideoInteractionSessions(
-    courseRunDirName,
-    logFiles,
-    courseRunBars[1],
+async function processSessionsForCourseRun(courseRunDirName, logFiles) {
+  const sessionsBar = new cliProgress.SingleBar(
+    {
+      hideCursor: true,
+      barsize: 20,
+      etaBuffer: 20,
+      forceRedraw: true,
+      clearOnComplete: true,
+      format:
+        " {bar} | Processing sessions for {course_run} | {value}/{total} | Duration: {duration_formatted} | ETA: {eta_formatted}",
+    },
+    cliProgress.Presets.shades_classic
   );
-  courseRunBars[1].stop();
 
-  await processAssessmentsSubmissions(
-    courseRunDirName,
-    logFiles,
-    courseRunBars[2],
-  );
-  courseRunBars[2].stop();
+  const numberOfLogProcessingFunctions = 5;
+  sessionsBar.start(numberOfLogProcessingFunctions, 0, {
+    course_run: courseRunDirName,
+  });
 
-  await processQuizSessions(courseRunDirName, logFiles, courseRunBars[3]);
-  courseRunBars[3].stop();
+  await processGeneralSessions(courseRunDirName, logFiles);
+  sessionsBar.increment();
 
-  await processORASessions(courseRunDirName, logFiles, courseRunBars[4]);
-  courseRunBars[4].stop();
+  await processVideoInteractionSessions(courseRunDirName, logFiles);
+  sessionsBar.increment();
+
+  await processAssessmentsSubmissions(logFiles);
+  sessionsBar.increment();
+
+  await processQuizSessions(courseRunDirName, logFiles);
+  sessionsBar.increment();
+
+  await processORASessions(courseRunDirName, logFiles);
+  sessionsBar.increment();
+
+  sessionsBar.stop();
 }
 
 /**
@@ -131,89 +163,41 @@ async function processSessionsForCourseRun(
  * @param {string} courseRunDirName The name of the course run directory
  * @param {string[]} logFiles The log file paths for the course run
  * @param {string} coursesDirectory The top-level directory all course runs are in
- * @param {cliProgress.SingleBar[]} courseRunBars The progress bars for this course run
  */
-async function processCourseRun(
-  courseRunDirName,
-  logFiles,
-  coursesDirectory,
-  courseRunBars,
-) {
+async function processCourseRun(courseRunDirName, logFiles, coursesDirectory) {
   await readMetadataFiles(
     path.join(coursesDirectory, courseRunDirName),
-    courseRunDirName,
+    courseRunDirName
   );
-  await processSessionsForCourseRun(courseRunDirName, logFiles, courseRunBars);
+  await processSessionsForCourseRun(courseRunDirName, logFiles);
 }
 
 async function main() {
-  const testing = false;
+  const dev = false;
 
-  let courses = ["EX101x", "FP101x", "ST1x", "UnixTx"];
+  let courses = ["FP101x", "UnixTx", "EX101x", "ST1x"];
   let workingDirectory = "W:/staff-umbrella/gdicsmoocs/Working copy";
 
-  if (testing) {
-    courses = ["UnixTx"];
+  if (dev) {
+    courses = ["UnixTx", "EX101x"];
     workingDirectory =
       "W:/staff-umbrella/gdicsmoocs/Working copy/scripts/testing";
   }
   try {
-    testConnection(testing);
+    testConnection(dev);
 
-    await clearDatabase(testing);
+    await clearDatabase(dev);
 
     const logFilesPerCourseRun = await identifyLogFilesPerCourseRun(
       workingDirectory,
-      courses,
+      courses
     );
 
-    const logProcessingBar = new cliProgress.MultiBar(
-      {
-        clearOnComplete: true,
-        hideCursor: true,
-        barsize: 20,
-        etaBuffer: 20,
-        format:
-          " {bar} | Processing {task} for {course_run} | {value}/{total} | Duration: {duration_formatted} | ETA: {eta_formatted}",
-      },
-      cliProgress.Presets.shades_grey,
-    );
-
-    const logProcessingFunctions = [
-      "General Sessions",
-      "Video Interaction Sessions",
-      "Assessments Submissions",
-      "Quiz Sessions",
-      "ORA Sessions",
-    ];
-    const logProcessingBars = {};
-    for (let courseRunDirName in logFilesPerCourseRun) {
-      logProcessingBars[courseRunDirName] = [];
-      for (let logProcessingFunction of logProcessingFunctions) {
-        logProcessingBars[courseRunDirName].push(
-          logProcessingBar.create(
-            logFilesPerCourseRun[courseRunDirName].length,
-            0,
-            {
-              course_run: courseRunDirName,
-              task: logProcessingFunction,
-            },
-          ),
-        );
-      }
+    for (let [courseRunDirName, logFiles] of Object.entries(
+      logFilesPerCourseRun
+    )) {
+      await processCourseRun(courseRunDirName, logFiles, workingDirectory);
     }
-
-    for (let courseRunDirName in logFilesPerCourseRun) {
-      const logFiles = logFilesPerCourseRun[courseRunDirName];
-      await processCourseRun(
-        courseRunDirName,
-        logFiles,
-        workingDirectory,
-        logProcessingBars[courseRunDirName],
-      );
-    }
-
-    logProcessingBar.stop();
   } catch (error) {
     console.error(error);
   }
