@@ -50,7 +50,7 @@ async function identifyLogFilesPerCourseRun(coursesDirectory, courses) {
   let directories = await fs.promises.readdir(coursesDirectory);
 
   const courseDirectoryNames = directories.filter((dirName) =>
-    courses.some((course) => dirName.includes(course))
+    courses.some((course) => dirName.includes(course)),
   );
 
   for (let courseDirectoryName of courseDirectoryNames) {
@@ -74,7 +74,7 @@ async function identifyLogFilesPerCourseRun(coursesDirectory, courses) {
           "{bar} | Identifying and verifying log files for {course_run} | {value}/{total} | Duration: {duration_formatted} | ETA: {eta_formatted}",
         clearOnComplete: true,
       },
-      cliProgress.Presets.shades_classic
+      cliProgress.Presets.shades_classic,
     );
 
     courseRunBar.start(totalFiles, 0, { course_run: courseDirectoryName });
@@ -128,28 +128,28 @@ async function processSessionsForCourseRun(courseRunDirName, logFiles) {
       format:
         " {bar} | Processing sessions for {course_run} | {value}/{total} | Duration: {duration_formatted} | ETA: {eta_formatted}",
     },
-    cliProgress.Presets.shades_classic
+    cliProgress.Presets.shades_classic,
   );
 
-  const numberOfLogProcessingFunctions = 5;
+  const numberOfLogProcessingFunctions = 1;
   sessionsBar.start(numberOfLogProcessingFunctions, 0, {
     course_run: courseRunDirName,
   });
 
-  await processGeneralSessions(courseRunDirName, logFiles);
-  sessionsBar.increment();
+  // await processGeneralSessions(courseRunDirName, logFiles);
+  // sessionsBar.increment();
 
-  await processVideoInteractionSessions(courseRunDirName, logFiles);
-  sessionsBar.increment();
+  // await processVideoInteractionSessions(courseRunDirName, logFiles);
+  // sessionsBar.increment();
 
-  await processAssessmentsSubmissions(logFiles);
-  sessionsBar.increment();
+  // await processAssessmentsSubmissions(logFiles);
+  // sessionsBar.increment();
 
   await processQuizSessions(courseRunDirName, logFiles);
   sessionsBar.increment();
 
-  await processORASessions(courseRunDirName, logFiles);
-  sessionsBar.increment();
+  // await processORASessions(courseRunDirName, logFiles);
+  // sessionsBar.increment();
 
   sessionsBar.stop();
 }
@@ -163,7 +163,7 @@ async function processSessionsForCourseRun(courseRunDirName, logFiles) {
 async function processCourseRun(courseRunDirName, logFiles, coursesDirectory) {
   await readMetadataFiles(
     path.join(coursesDirectory, courseRunDirName),
-    courseRunDirName
+    courseRunDirName,
   );
   await processSessionsForCourseRun(courseRunDirName, logFiles);
 }
@@ -182,15 +182,15 @@ async function main() {
   try {
     testConnection(dev);
 
-    await clearDatabase(dev);
+    // await clearDatabase(dev);
 
     const logFilesPerCourseRun = await identifyLogFilesPerCourseRun(
       workingDirectory,
-      courses
+      courses,
     );
 
     for (let [courseRunDirName, logFiles] of Object.entries(
-      logFilesPerCourseRun
+      logFilesPerCourseRun,
     )) {
       await processCourseRun(courseRunDirName, logFiles, workingDirectory);
     }

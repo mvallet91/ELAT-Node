@@ -2,13 +2,13 @@ const { MongoClient } = require("mongodb");
 const credentials = require("./credentials");
 
 // Database Name
-const prodDbName = "edx_test";
+const prodDbName = "edx-test";
 const devDbName = "edx_testing";
 const username = encodeURIComponent(credentials.admin.user);
 const password = encodeURIComponent(credentials.admin.pwd);
 const mogodb_url = credentials.mongodb_url;
 
-const dev = false;
+const dev = true;
 
 const url = `mongodb://${mogodb_url}`;
 // const url = `mongodb://${username}:${password}@${mogodb_url}`;
@@ -23,7 +23,7 @@ async function testConnection(testing = dev) {
     const collections = await db.collections();
     console.log(
       "Collections in the database:",
-      collections.map((c) => c.collectionName)
+      collections.map((c) => c.collectionName),
     );
   } catch (err) {
     console.error("Connection failed:", err);
@@ -68,7 +68,7 @@ async function mongoQuery(
   collectionName,
   query = {},
   limit = 0,
-  testing = dev
+  testing = dev,
 ) {
   const dbName = testing ? devDbName : prodDbName;
   const client = new MongoClient(url, {
@@ -108,7 +108,7 @@ async function deleteIfExists(collectionName, testing = dev) {
   } catch (err) {
     console.error(
       `An error occurred while checking/deleting collection ${collectionName}:`,
-      err
+      err,
     );
   } finally {
     await client.close();
@@ -156,7 +156,7 @@ async function clearSessionsCollections(testing = dev) {
   } catch (err) {
     console.error(
       "An error occurred while clearing the sessions collections:",
-      err
+      err,
     );
   } finally {
     await client.close();
