@@ -31,7 +31,7 @@ async function processGeneralSessions(courseRunName, logFiles) {
   let currentCourseId = courseMetadataMap["course_id"];
   currentCourseId = currentCourseId.slice(
     currentCourseId.indexOf("+") + 1,
-    currentCourseId.lastIndexOf("+") + 7
+    currentCourseId.lastIndexOf("+") + 7,
   );
 
   for (let i = 0; i < logFiles.length; i++) {
@@ -40,7 +40,7 @@ async function processGeneralSessions(courseRunName, logFiles) {
     let sessionRecord = [];
     const logFile = logFiles[i];
     learnerAllEventLogs = JSON.parse(
-      JSON.stringify(updatedLearnerAllEventLogs)
+      JSON.stringify(updatedLearnerAllEventLogs),
     );
 
     let courseLearnerIdSet = new Set();
@@ -221,7 +221,7 @@ async function processVideoInteractionSessions(courseRunName, logFiles) {
   const courseId = courseMetadataMap["course_id"],
     currentCourseId = courseId.slice(
       courseId.indexOf("+") + 1,
-      courseId.lastIndexOf("+") + 7
+      courseId.lastIndexOf("+") + 7,
     );
 
   const videoEventTypes = [
@@ -417,7 +417,7 @@ async function processVideoInteractionSessions(courseRunName, logFiles) {
                 if (
                   Object.prototype.hasOwnProperty.call(
                     videoInteractionMap[videoInteractionId],
-                    "times_pause"
+                    "times_pause",
                   )
                 ) {
                   videoInteractionMap[videoInteractionId]["times_pause"] =
@@ -448,7 +448,7 @@ async function processVideoInteractionSessions(courseRunName, logFiles) {
             // Seek
             if (
               ["seek_video", "edx.video.position.changed"].includes(
-                log["event_type"]
+                log["event_type"],
               ) &&
               videoId === log["video_id"]
             ) {
@@ -610,7 +610,7 @@ async function processVideoInteractionSessions(courseRunName, logFiles) {
       if (
         Object.prototype.hasOwnProperty.call(
           videoInteractionMap[interactionId],
-          "times_pause"
+          "times_pause",
         )
       ) {
         timesPause = videoInteractionMap[interactionId]["times_pause"];
@@ -735,19 +735,20 @@ async function processQuizSessions(courseRunName, logFiles) {
   const courseId = courseMetadataMap["course_id"];
   const currentCourseId = courseId.slice(
     courseId.indexOf("+") + 1,
-    courseId.lastIndexOf("+") + 7
+    courseId.lastIndexOf("+") + 7,
   );
 
   let childParentMap = courseMetadataMap["child_parent_map"];
+  let learnerAllEventLogs = {},
+    updatedLearnerAllEventLogs = {},
+    quizSessions = {};
 
   for (let i = 0; i < logFiles.length; i++) {
     const logFile = logFiles[i];
-
-    let learnerAllEventLogs = {},
-      updatedLearnerAllEventLogs = {},
-      quizSessions = {};
-
+    (learnerAllEventLogs = updatedLearnerAllEventLogs),
+      (updatedLearnerAllEventLogs = {});
     let courseLearnerIdSet = new Set();
+
     if (learnerAllEventLogs.length > 0) {
       for (const courseLearnerId of learnerAllEventLogs) {
         courseLearnerIdSet.add(courseLearnerId);
@@ -773,37 +774,36 @@ async function processQuizSessions(courseRunName, logFiles) {
     ];
 
     for await (const line of readLines(logFile)) {
-      let jsonObject = JSON.parse(line);
       if (line.length < 10 || !line.includes(currentCourseId)) {
         continue;
       }
+
+      const jsonObject = JSON.parse(line);
       if (!("user_id" in jsonObject["context"])) {
         continue;
       }
       const globalLearnerId = jsonObject["context"]["user_id"],
         event_type = jsonObject["event_type"];
-      let eventInfo = "";
-      if (Object.prototype.hasOwnProperty.call(jsonObject, "event")) {
-        eventInfo = jsonObject["event"];
-      }
+
       if (globalLearnerId === "") {
         continue;
       }
       const courseId = jsonObject["context"]["course_id"],
         courseLearnerId = courseId + "_" + globalLearnerId,
         eventTime = new Date(jsonObject["time"]);
+      const event = jsonObject["event"];
       if (courseLearnerId in learnerAllEventLogs) {
         learnerAllEventLogs[courseLearnerId].push({
           event_time: eventTime,
           event_type: event_type,
-          event: eventInfo,
+          event: event,
         });
       } else {
         learnerAllEventLogs[courseLearnerId] = [
           {
             event_time: eventTime,
             event_type: event_type,
-            event: eventInfo,
+            event: event,
           },
         ];
       }
@@ -816,7 +816,7 @@ async function processQuizSessions(courseRunName, logFiles) {
       if (
         !Object.prototype.hasOwnProperty.call(
           learnerAllEventLogs,
-          courseLearnerId
+          courseLearnerId,
         )
       ) {
         continue;
@@ -847,6 +847,16 @@ async function processQuizSessions(courseRunName, logFiles) {
             if (eventLogs[i]["event_type"].includes("_problem;_")) {
               // questionId = eventTypeArray[6].replace(/;_/g, '/');
               questionId = eventLogs[i]["event"]["problem_id"];
+            }
+            if (Array.isArray(eventLogs[i]["event"])) {
+              const input = eventLogs[i]["event"][0];
+              const blockId = input.split("_")[1];
+              const key = Object.keys(childParentMap).find((key) =>
+                key.includes(blockId),
+              );
+              if (key) {
+                questionId = key;
+              }
             }
             if (questionId in childParentMap) {
               sessionId =
@@ -965,10 +975,10 @@ async function processQuizSessions(courseRunName, logFiles) {
           let verificationTime = new Date(endTime);
           if (i === 0) {
             startTime = new Date(
-              quizSessions[sessionId]["time_array"][i]["start_time"]
+              quizSessions[sessionId]["time_array"][i]["start_time"],
             );
             endTime = new Date(
-              quizSessions[sessionId]["time_array"][i]["end_time"]
+              quizSessions[sessionId]["time_array"][i]["end_time"],
             );
           } else if (
             new Date(quizSessions[sessionId]["time_array"][i]["start_time"]) >
@@ -979,10 +989,10 @@ async function processQuizSessions(courseRunName, logFiles) {
               end_time: endTime,
             });
             startTime = new Date(
-              quizSessions[sessionId]["time_array"][i]["start_time"]
+              quizSessions[sessionId]["time_array"][i]["start_time"],
             );
             endTime = new Date(
-              quizSessions[sessionId]["time_array"][i]["end_time"]
+              quizSessions[sessionId]["time_array"][i]["end_time"],
             );
             if (
               i ===
@@ -995,7 +1005,7 @@ async function processQuizSessions(courseRunName, logFiles) {
             }
           } else {
             endTime = new Date(
-              quizSessions[sessionId]["time_array"][i]["end_time"]
+              quizSessions[sessionId]["time_array"][i]["end_time"],
             );
             if (
               i ===
@@ -1024,10 +1034,10 @@ async function processQuizSessions(courseRunName, logFiles) {
         i++
       ) {
         let startTime = new Date(
-          quizSessions[sessionId]["time_array"][i]["start_time"]
+          quizSessions[sessionId]["time_array"][i]["start_time"],
         );
         let endTime = new Date(
-          quizSessions[sessionId]["time_array"][i]["end_time"]
+          quizSessions[sessionId]["time_array"][i]["end_time"],
         );
         if (startTime < endTime) {
           let duration = (endTime - startTime) / 1000;
@@ -1112,7 +1122,7 @@ async function processORASessions(courseRunName, logFiles) {
   const courseId = courseMetadataMap["course_id"];
   const currentCourseId = courseId.slice(
     courseId.indexOf("+") + 1,
-    courseId.lastIndexOf("+") + 7
+    courseId.lastIndexOf("+") + 7,
   );
 
   let learnerAllEventLogs = {};
@@ -1185,7 +1195,7 @@ async function processORASessions(courseRunName, logFiles) {
             startTime = new Date(eventLogs[i]["event_time"]);
             endTime = new Date(eventLogs[i]["event_time"]);
             let eventDetails = getORAEventTypeAndElement(
-              eventLogs[i]["full_event"]
+              eventLogs[i]["full_event"],
             );
             currentElement = eventDetails.element;
             eventType = eventDetails.eventType;
@@ -1209,13 +1219,13 @@ async function processORASessions(courseRunName, logFiles) {
             }
 
             learnerOraEvents.push(
-              "Empty id: " + currentStatus + "_" + meta + "_" + eventType
+              "Empty id: " + currentStatus + "_" + meta + "_" + eventType,
             );
           }
         } else {
           if (eventLogs[i]["event_type"].includes("openassessment")) {
             let eventDetails = getORAEventTypeAndElement(
-              eventLogs[i]["full_event"]
+              eventLogs[i]["full_event"],
             );
             currentElement = eventDetails.element;
             eventType = eventDetails.eventType;
@@ -1252,7 +1262,7 @@ async function processORASessions(courseRunName, logFiles) {
                   "_" +
                   meta +
                   "_" +
-                  eventType
+                  eventType,
               );
 
               sessionId =
@@ -1280,7 +1290,7 @@ async function processORASessions(courseRunName, logFiles) {
                   "_" +
                   meta +
                   "_" +
-                  eventType
+                  eventType,
               );
             } else {
               endTime = new Date(eventLogs[i]["event_time"]);
@@ -1300,7 +1310,7 @@ async function processORASessions(courseRunName, logFiles) {
                 currentStatus = "assessingPeers";
               }
               learnerOraEvents.push(
-                "Under 30 min: " + currentStatus + "_" + meta + "_" + eventType
+                "Under 30 min: " + currentStatus + "_" + meta + "_" + eventType,
               );
             }
           } else {
@@ -1310,7 +1320,7 @@ async function processORASessions(courseRunName, logFiles) {
                 "_" +
                 meta +
                 "_" +
-                eventType
+                eventType,
             );
 
             let verificationTime = new Date(endTime);
