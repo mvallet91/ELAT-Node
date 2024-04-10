@@ -131,25 +131,25 @@ async function processSessionsForCourseRun(courseRunDirName, logFiles) {
     cliProgress.Presets.shades_classic,
   );
 
-  const numberOfLogProcessingFunctions = 1;
+  const numberOfLogProcessingFunctions = 5;
   sessionsBar.start(numberOfLogProcessingFunctions, 0, {
     course_run: courseRunDirName,
   });
 
-  // await processGeneralSessions(courseRunDirName, logFiles);
-  // sessionsBar.increment();
+  await processGeneralSessions(courseRunDirName, logFiles);
+  sessionsBar.increment();
 
-  // await processVideoInteractionSessions(courseRunDirName, logFiles);
-  // sessionsBar.increment();
+  await processVideoInteractionSessions(courseRunDirName, logFiles);
+  sessionsBar.increment();
 
-  // await processAssessmentsSubmissions(logFiles);
-  // sessionsBar.increment();
+  await processAssessmentsSubmissions(logFiles);
+  sessionsBar.increment();
 
   await processQuizSessions(courseRunDirName, logFiles);
   sessionsBar.increment();
 
-  // await processORASessions(courseRunDirName, logFiles);
-  // sessionsBar.increment();
+  await processORASessions(courseRunDirName, logFiles);
+  sessionsBar.increment();
 
   sessionsBar.stop();
 }
@@ -182,7 +182,7 @@ async function main() {
   try {
     testConnection(dev);
 
-    // await clearDatabase(dev);
+    await clearDatabase(dev);
 
     const logFilesPerCourseRun = await identifyLogFilesPerCourseRun(
       workingDirectory,
