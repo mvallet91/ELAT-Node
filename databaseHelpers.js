@@ -2,13 +2,13 @@ const { MongoClient } = require("mongodb");
 const credentials = require("./credentials");
 
 // Database Name
-const prodDbName = "edx-test";
-const devDbName = "edx_testing";
+const prodDbName = "edx_prod";
+const devDbName = "edx_dev";
 const username = encodeURIComponent(credentials.admin.user);
 const password = encodeURIComponent(credentials.admin.pwd);
 const mogodb_url = credentials.mongodb_url;
 
-const dev = true;
+const dev = false;
 
 const url = `mongodb://${mogodb_url}`;
 // const url = `mongodb://${username}:${password}@${mogodb_url}`;
