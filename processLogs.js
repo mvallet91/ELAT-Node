@@ -1,5 +1,5 @@
 const { mongoQuery, mongoInsert } = require("./databaseHelpers");
-const { processNull } = require("./helpers");
+const { processNull, getNextDay, courseElementsFinder } = require("./helpers");
 const createReadStream = require("fs").createReadStream;
 const createGunzip = require("zlib").createGunzip;
 const createInterface = require("readline").createInterface;
@@ -28,10 +28,11 @@ async function processGeneralSessions(courseRunName, logFiles) {
   });
   courseMetadataMap = courseMetadataMap[0]["object"];
 
-  let currentCourseId = courseMetadataMap["course_id"];
-  currentCourseId = currentCourseId.slice(
+  const courseId = courseMetadataMap["course_id"];
+
+  const currentCourseId = courseId.slice(
     currentCourseId.indexOf("+") + 1,
-    currentCourseId.lastIndexOf("+") + 7,
+    currentCourseId.lastIndexOf("+") + 7
   );
 
   for (let i = 0; i < logFiles.length; i++) {
@@ -40,7 +41,7 @@ async function processGeneralSessions(courseRunName, logFiles) {
     let sessionRecord = [];
     const logFile = logFiles[i];
     learnerAllEventLogs = JSON.parse(
-      JSON.stringify(updatedLearnerAllEventLogs),
+      JSON.stringify(updatedLearnerAllEventLogs)
     );
 
     let courseLearnerIdSet = new Set();
@@ -221,7 +222,7 @@ async function processVideoInteractionSessions(courseRunName, logFiles) {
   const courseId = courseMetadataMap["course_id"],
     currentCourseId = courseId.slice(
       courseId.indexOf("+") + 1,
-      courseId.lastIndexOf("+") + 7,
+      courseId.lastIndexOf("+") + 7
     );
 
   const videoEventTypes = [
@@ -417,7 +418,7 @@ async function processVideoInteractionSessions(courseRunName, logFiles) {
                 if (
                   Object.prototype.hasOwnProperty.call(
                     videoInteractionMap[videoInteractionId],
-                    "times_pause",
+                    "times_pause"
                   )
                 ) {
                   videoInteractionMap[videoInteractionId]["times_pause"] =
@@ -448,7 +449,7 @@ async function processVideoInteractionSessions(courseRunName, logFiles) {
             // Seek
             if (
               ["seek_video", "edx.video.position.changed"].includes(
-                log["event_type"],
+                log["event_type"]
               ) &&
               videoId === log["video_id"]
             ) {
@@ -610,7 +611,7 @@ async function processVideoInteractionSessions(courseRunName, logFiles) {
       if (
         Object.prototype.hasOwnProperty.call(
           videoInteractionMap[interactionId],
-          "times_pause",
+          "times_pause"
         )
       ) {
         timesPause = videoInteractionMap[interactionId]["times_pause"];
@@ -735,7 +736,7 @@ async function processQuizSessions(courseRunName, logFiles) {
   const courseId = courseMetadataMap["course_id"];
   const currentCourseId = courseId.slice(
     courseId.indexOf("+") + 1,
-    courseId.lastIndexOf("+") + 7,
+    courseId.lastIndexOf("+") + 7
   );
 
   let childParentMap = courseMetadataMap["child_parent_map"];
@@ -816,7 +817,7 @@ async function processQuizSessions(courseRunName, logFiles) {
       if (
         !Object.prototype.hasOwnProperty.call(
           learnerAllEventLogs,
-          courseLearnerId,
+          courseLearnerId
         )
       ) {
         continue;
@@ -852,7 +853,7 @@ async function processQuizSessions(courseRunName, logFiles) {
               const input = eventLogs[i]["event"][0];
               const blockId = input.split("_")[1];
               const key = Object.keys(childParentMap).find((key) =>
-                key.includes(blockId),
+                key.includes(blockId)
               );
               if (key) {
                 questionId = key;
@@ -975,10 +976,10 @@ async function processQuizSessions(courseRunName, logFiles) {
           let verificationTime = new Date(endTime);
           if (i === 0) {
             startTime = new Date(
-              quizSessions[sessionId]["time_array"][i]["start_time"],
+              quizSessions[sessionId]["time_array"][i]["start_time"]
             );
             endTime = new Date(
-              quizSessions[sessionId]["time_array"][i]["end_time"],
+              quizSessions[sessionId]["time_array"][i]["end_time"]
             );
           } else if (
             new Date(quizSessions[sessionId]["time_array"][i]["start_time"]) >
@@ -989,10 +990,10 @@ async function processQuizSessions(courseRunName, logFiles) {
               end_time: endTime,
             });
             startTime = new Date(
-              quizSessions[sessionId]["time_array"][i]["start_time"],
+              quizSessions[sessionId]["time_array"][i]["start_time"]
             );
             endTime = new Date(
-              quizSessions[sessionId]["time_array"][i]["end_time"],
+              quizSessions[sessionId]["time_array"][i]["end_time"]
             );
             if (
               i ===
@@ -1005,7 +1006,7 @@ async function processQuizSessions(courseRunName, logFiles) {
             }
           } else {
             endTime = new Date(
-              quizSessions[sessionId]["time_array"][i]["end_time"],
+              quizSessions[sessionId]["time_array"][i]["end_time"]
             );
             if (
               i ===
@@ -1034,10 +1035,10 @@ async function processQuizSessions(courseRunName, logFiles) {
         i++
       ) {
         let startTime = new Date(
-          quizSessions[sessionId]["time_array"][i]["start_time"],
+          quizSessions[sessionId]["time_array"][i]["start_time"]
         );
         let endTime = new Date(
-          quizSessions[sessionId]["time_array"][i]["end_time"],
+          quizSessions[sessionId]["time_array"][i]["end_time"]
         );
         if (startTime < endTime) {
           let duration = (endTime - startTime) / 1000;
@@ -1122,7 +1123,7 @@ async function processORASessions(courseRunName, logFiles) {
   const courseId = courseMetadataMap["course_id"];
   const currentCourseId = courseId.slice(
     courseId.indexOf("+") + 1,
-    courseId.lastIndexOf("+") + 7,
+    courseId.lastIndexOf("+") + 7
   );
 
   let learnerAllEventLogs = {};
@@ -1195,7 +1196,7 @@ async function processORASessions(courseRunName, logFiles) {
             startTime = new Date(eventLogs[i]["event_time"]);
             endTime = new Date(eventLogs[i]["event_time"]);
             let eventDetails = getORAEventTypeAndElement(
-              eventLogs[i]["full_event"],
+              eventLogs[i]["full_event"]
             );
             currentElement = eventDetails.element;
             eventType = eventDetails.eventType;
@@ -1219,13 +1220,13 @@ async function processORASessions(courseRunName, logFiles) {
             }
 
             learnerOraEvents.push(
-              "Empty id: " + currentStatus + "_" + meta + "_" + eventType,
+              "Empty id: " + currentStatus + "_" + meta + "_" + eventType
             );
           }
         } else {
           if (eventLogs[i]["event_type"].includes("openassessment")) {
             let eventDetails = getORAEventTypeAndElement(
-              eventLogs[i]["full_event"],
+              eventLogs[i]["full_event"]
             );
             currentElement = eventDetails.element;
             eventType = eventDetails.eventType;
@@ -1262,7 +1263,7 @@ async function processORASessions(courseRunName, logFiles) {
                   "_" +
                   meta +
                   "_" +
-                  eventType,
+                  eventType
               );
 
               sessionId =
@@ -1290,7 +1291,7 @@ async function processORASessions(courseRunName, logFiles) {
                   "_" +
                   meta +
                   "_" +
-                  eventType,
+                  eventType
               );
             } else {
               endTime = new Date(eventLogs[i]["event_time"]);
@@ -1310,7 +1311,7 @@ async function processORASessions(courseRunName, logFiles) {
                 currentStatus = "assessingPeers";
               }
               learnerOraEvents.push(
-                "Under 30 min: " + currentStatus + "_" + meta + "_" + eventType,
+                "Under 30 min: " + currentStatus + "_" + meta + "_" + eventType
               );
             }
           } else {
@@ -1320,7 +1321,7 @@ async function processORASessions(courseRunName, logFiles) {
                 "_" +
                 meta +
                 "_" +
-                eventType,
+                eventType
             );
 
             let verificationTime = new Date(endTime);
@@ -1397,10 +1398,292 @@ async function processORASessions(courseRunName, logFiles) {
   }
 }
 
+/**
+ * This function will read the records in the logfile and extract all interactions from students with the forums,
+ * process their values, like duration and times they search, to finally store them in the database
+ * @param {string} courseRunName - The name of the course run
+ * @param {string[]} logFiles - The list of log files
+ */
+async function processForumSessions(courseRunName, logFiles) {
+  let courseMetadataMap = await mongoQuery("metadata", {
+    name: courseRunName,
+  });
+  courseMetadataMap = courseMetadataMap[0]["object"];
+
+  const courseId = courseMetadataMap["course_id"];
+  const currentCourseId = courseId.slice(
+    courseId.indexOf("+") + 1,
+    courseId.lastIndexOf("+") + 7
+  );
+
+  let startDate = new Date(courseMetadataMap["start_date"]);
+  let currentDate = new Date(startDate);
+  let forumEventTypes = [
+    "edx.forum.comment.created",
+    "edx.forum.comment.created",
+    "edx.forum.response.created",
+    "edx.forum.response.voted",
+    "edx.forum.thread.created",
+    "edx.forum.thread.voted",
+    "edx.forum.searched",
+  ];
+
+  let learnerAllEventLogs = {};
+  let updatedAllEventLogs = {};
+  let forumSessionRecord = [];
+
+  for (let logFile of logFiles) {
+    learnerAllEventLogs = {};
+    learnerAllEventLogs = updatedAllEventLogs;
+    updatedAllEventLogs = {};
+    let courseLearnerIdSet = new Set();
+    if (learnerAllEventLogs.length > 0) {
+      for (let courseLearnerId of learnerAllEventLogs) {
+        courseLearnerIdSet.add(courseLearnerId);
+      }
+    }
+
+    for await (const line of readLines(logFile)) {
+      if (line.length < 10 || !line.includes(currentCourseId)) {
+        continue;
+      }
+      let jsonObject = JSON.parse(line);
+      if (
+        !("user_id" in jsonObject["context"]) ||
+        jsonObject["context"]["user_id"] === ""
+      ) {
+        continue;
+      }
+      const globalLearnerId = jsonObject["context"]["user_id"];
+      let eventType = jsonObject["event_type"];
+      if (
+        eventType.includes("/discussion/") ||
+        forumEventTypes.includes(eventType)
+      ) {
+        if (eventType !== "edx.forum.searched") {
+          eventType = "forum_activity";
+        }
+      }
+      if (globalLearnerId !== "") {
+        const courseId = jsonObject["context"]["course_id"],
+          courseLearnerId = courseId + "_" + globalLearnerId,
+          eventTime = new Date(jsonObject["time"]);
+
+        let eventPage = "";
+        if ("page" in jsonObject) {
+          if (jsonObject["page"] === null) {
+            eventPage = "";
+          } else {
+            eventPage = jsonObject["page"];
+          }
+        }
+        let eventPath = "";
+        if ("path" in jsonObject) {
+          eventPath = jsonObject["path"];
+        }
+        let eventReferer = "";
+        if ("referer" in jsonObject) {
+          eventReferer = jsonObject["referer"];
+        }
+        if (courseLearnerIdSet.has(courseLearnerId)) {
+          learnerAllEventLogs[courseLearnerId].push({
+            event_time: eventTime,
+            event_type: eventType,
+            page: eventPage,
+            path: eventPath,
+            referer: eventReferer,
+          });
+        } else {
+          learnerAllEventLogs[courseLearnerId] = [
+            {
+              event_time: eventTime,
+              event_type: eventType,
+              page: eventPage,
+              path: eventPath,
+              referer: eventReferer,
+            },
+          ];
+          courseLearnerIdSet.add(courseLearnerId);
+        }
+      }
+    }
+
+    for (const learner in learnerAllEventLogs) {
+      const courseLearnerId = learner,
+        courseId = courseLearnerId.split("_")[0];
+      let eventLogs = learnerAllEventLogs[learner];
+      eventLogs.sort(function (a, b) {
+        return b.event_type - a.event_type;
+      });
+      eventLogs.sort(function (a, b) {
+        return new Date(a.event_time) - new Date(b.event_time);
+      });
+      let sessionId = "",
+        startTime = null,
+        endTime = null,
+        finalTime = null,
+        timesSearch = 0,
+        sessionRelatedElementPrevious = "",
+        sessionRelatedElementCurrent = "";
+      for (let i in eventLogs) {
+        let relatedElementCurrent = courseElementsFinder(
+          eventLogs[i],
+          courseId
+        );
+        if (sessionId === "") {
+          if (
+            ["forum_activity", "edx.forum.searched"].includes(
+              eventLogs[i]["event_type"]
+            )
+          ) {
+            sessionId = "forum_session_" + courseLearnerId;
+            startTime = new Date(eventLogs[i]["event_time"]);
+            endTime = new Date(eventLogs[i]["event_time"]);
+            if (eventLogs[i]["event_type"] === "edx.forum.searched") {
+              timesSearch++;
+            }
+            sessionRelatedElementCurrent = relatedElementCurrent;
+          }
+        } else {
+          if (
+            ["forum_activity", "edx.forum.searched"].includes(
+              eventLogs[i]["event_type"]
+            )
+          ) {
+            let verification_time = new Date(endTime);
+            if (
+              new Date(eventLogs[i]["event_time"]) >
+              verification_time.setMinutes(verification_time.getMinutes() + 30)
+            ) {
+              sessionId =
+                sessionId + "_" + startTime.getTime() + "_" + endTime.getTime();
+              // session_id = session_id + '_' + start_time + '_' + end_time;
+              const duration = (endTime - startTime) / 1000;
+
+              if (duration > 5) {
+                let relatedElementId = "";
+                if (sessionRelatedElementCurrent !== "") {
+                  relatedElementId = sessionRelatedElementCurrent;
+                } else {
+                  relatedElementId = sessionRelatedElementPrevious;
+                }
+                let array = [
+                  sessionId,
+                  courseLearnerId,
+                  timesSearch,
+                  startTime,
+                  endTime,
+                  duration,
+                  relatedElementId,
+                ];
+                forumSessionRecord.push(array);
+              }
+              finalTime = new Date(eventLogs[i]["event_time"]);
+
+              sessionId = "forum_session_" + courseLearnerId;
+              startTime = new Date(eventLogs[i]["event_time"]);
+              endTime = new Date(eventLogs[i]["event_time"]);
+              if (eventLogs[i]["event_type"] === "edx.forum.searched") {
+                timesSearch = 1;
+              }
+              sessionRelatedElementCurrent = relatedElementCurrent;
+            } else {
+              endTime = new Date(eventLogs[i]["event_time"]);
+              if (eventLogs[i]["event_type"] === "edx.forum.searched") {
+                timesSearch++;
+              }
+              if (sessionRelatedElementCurrent === "") {
+                sessionRelatedElementCurrent = relatedElementCurrent;
+              }
+            }
+          } else {
+            let verificationTime = new Date(endTime);
+            if (
+              new Date(eventLogs[i]["event_time"]) <=
+              verificationTime.setMinutes(verificationTime.getMinutes() + 30)
+            ) {
+              endTime = new Date(eventLogs[i]["event_time"]);
+            }
+            sessionId =
+              sessionId + "_" + startTime.getTime() + "_" + endTime.getTime();
+            const duration = (endTime - startTime) / 1000;
+
+            if (duration > 5) {
+              let relElementId = "";
+              if (sessionRelatedElementCurrent !== "") {
+                relElementId = sessionRelatedElementCurrent;
+              } else {
+                relElementId = sessionRelatedElementPrevious;
+              }
+              let array = [
+                sessionId,
+                courseLearnerId,
+                timesSearch,
+                startTime,
+                endTime,
+                duration,
+                relElementId,
+              ];
+              forumSessionRecord.push(array);
+            }
+            finalTime = new Date(eventLogs[i]["event_time"]);
+            sessionId = "";
+            startTime = null;
+            endTime = null;
+            timesSearch = 0;
+          }
+          if (relatedElementCurrent !== "") {
+            sessionRelatedElementPrevious = relatedElementCurrent;
+          }
+        }
+      }
+      if (finalTime != null) {
+        let newLogs = [];
+        for (let log of eventLogs) {
+          if (new Date(log["event_time"]) >= finalTime) {
+            newLogs.push(log);
+          }
+        }
+        updatedAllEventLogs[courseLearnerId] = newLogs;
+      }
+    }
+
+    currentDate = getNextDay(currentDate);
+  }
+
+  if (forumSessionRecord.length > 0) {
+    let data = [];
+    for (let array of forumSessionRecord) {
+      let sessionId = array[0];
+      const courseLearnerId = array[1],
+        timesSearch = processNull(array[2]),
+        startTiem = array[3],
+        endTime = array[4],
+        duration = processNull(array[5]),
+        relElementId = array[6];
+      let values = {
+        session_id: sessionId,
+        course_learner_id: courseLearnerId,
+        times_search: timesSearch,
+        start_time: startTiem,
+        end_time: endTime,
+        duration: duration,
+        relevent_element_id: relElementId,
+      };
+      data.push(values);
+    }
+
+    if (data.length > 0) {
+      mongoInsert("forum_sessions", data);
+    }
+  }
+}
+
 module.exports = {
   processGeneralSessions,
   processVideoInteractionSessions,
   processAssessmentsSubmissions,
   processQuizSessions,
   processORASessions,
+  processForumSessions,
 };
