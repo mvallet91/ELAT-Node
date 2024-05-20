@@ -136,7 +136,7 @@ function getDayDiff(beginDate, endDate) {
 function courseElementsFinder(eventlog, course_id) {
   let elementsID = coucourseElementsFinder_string(
     eventlog["event_type"],
-    course_id,
+    course_id
   );
   if (elementsID === "") {
     elementsID = coucourseElementsFinder_string(eventlog["path"], course_id);
