@@ -31,8 +31,8 @@ async function processGeneralSessions(courseRunName, logFiles) {
   const courseId = courseMetadataMap["course_id"];
 
   const currentCourseId = courseId.slice(
-    currentCourseId.indexOf("+") + 1,
-    currentCourseId.lastIndexOf("+") + 7,
+    courseId.indexOf("+") + 1,
+    courseId.lastIndexOf("+") + 7,
   );
 
   for (const logFile of logFiles) {
