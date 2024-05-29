@@ -1,33 +1,4 @@
-const config = require('./config');
-
-/**
- * Function for development, used to download all processed dashboard data for Samples
- * @param connection Main JsStore worker that handles the connection to SqlWeb
- */
-function webdataJSON(connection){
-    connection.runSql("SELECT * FROM webdata").then(function(webElements) {
-        let jsonString = '[';
-        webElements.forEach(function (element) {
-            jsonString += JSON.stringify(element) + ',\n'
-        });
-        console.log(jsonString.slice(0, jsonString.lastIndexOf(',')) + ']')
-    });
-}
-
-
-/**
- * Process the text contents of a table into a csv-formatted file and download it
- * @param {string} filename String with the name of the file
- * @param {array} content Array of lines
- */
-function downloadCsv(filename, content) {
-    let downloadElement = document.createElement('a');
-    let joinedContent = content.map(e=>e.join(",")).join("\n");
-    let t = new Blob([joinedContent], {type : 'application/csv'});
-    downloadElement.href = URL.createObjectURL(t);
-    downloadElement.download = filename;
-    downloadElement.click();
-}
+const config = require("./config");
 
 /**
  * Manages a rule to separate students by their id, for example for A/B testing
@@ -35,22 +6,22 @@ function downloadCsv(filename, content) {
  * @returns {string} segment The segment they belong to
  */
 function learnerSegmentation(learnerId, segmentation) {
-    if (! segmentation) {
-        segmentation = config.segmentationType;
-        // let segmentationType = {'type': config.segmentationType};
+  if (!segmentation) {
+    segmentation = config.segmentationType;
+    // let segmentationType = {'type': config.segmentationType};
+  }
+  let segment = "none";
+  if (String(learnerId).includes("_")) {
+    learnerId = Number(learnerId.split("_")[1]);
+  }
+  if (segmentation === "ab") {
+    if (learnerId % 2 === 0) {
+      segment = "A";
+    } else {
+      segment = "B";
     }
-    let segment = 'none';
-    if (String(learnerId).includes('_')) {
-        learnerId = Number(learnerId.split('_')[1]);
-    }
-    if (segmentation === 'ab') {
-        if (learnerId % 2 === 0) {
-            segment = 'A'
-        } else {
-            segment = 'B'
-        }
-    }
-    return segment;
+  }
+  return segment;
 }
 
 /**
@@ -61,53 +32,9 @@ function learnerSegmentation(learnerId, segmentation) {
  * @returns {array} replaceInArray Array with the replaced value
  */
 function replaceAt(array, index, value) {
-    const replaceInArray = array.slice(0);
-    replaceInArray[index] = value;
-    return replaceInArray;
-}
-
-/**
- * Processing and download of a csv file of learners' forum behavior. The columns are the learner id, posting behavior and viewing behavior
- * @param connection
- */
-function downloadForumSegmentation(connection) {
-    connection.runSql("SELECT * FROM webdata WHERE name = 'studentsForumBehavior' ").then(function(result) {
-        if (result.length === 0){
-            console.log('Graph data has to be processed again, click the Update Graph Values button');
-        } else {
-            let studentList = [['studentId', 'posterGroup', 'viewerGroup']];
-            let forumSegments = result[0]['object'];
-            for (let student in forumSegments) {
-                const studentId = student.slice(student.indexOf('_')+1,);
-                let segments = [studentId, 'undefined', 'undefined'];
-                if (forumSegments[student].length > 0) {
-                    for (let group of forumSegments[student]) {
-                        if (group.includes('Poster')) {
-                            segments = replaceAt(segments, 1, group)
-                        }
-                        if (group.includes('Viewer')) {
-                            segments = replaceAt(segments, 2, group)
-                        }
-                    }
-                }
-                studentList.push(segments)
-            }
-            downloadCsv('studentsByForumGroup.csv', studentList)
-        }
-    })
-}
-
-/**
- * Adds a new cell with the progress of log processing in the dashboard
- * @param {string} content Content to be added
- * @param {number} index Position in the display table
- */
-function progressDisplay(content, index){
-    let table = document.getElementById("progress_tab");
-    table.insertRow();
-    let row = table.rows[index];
-    let cell1 = row.insertCell();
-    cell1.innerHTML = '  ' + content + '  ';
+  const replaceInArray = array.slice(0);
+  replaceInArray[index] = value;
+  return replaceInArray;
 }
 
 /**
@@ -116,16 +43,16 @@ function progressDisplay(content, index){
  * @param {Date} b_datetime Second datetime element
  * @returns {number} the result of the comparison
  */
-function compareDatetime(a_datetime, b_datetime){
-    a_datetime = new Date(a_datetime);
-    b_datetime = new Date(b_datetime);
-    if (a_datetime < b_datetime) {
-        return -1;
-    } else if (a_datetime > b_datetime){
-        return 1;
-    } else {
-        return 0;
-    }
+function compareDatetime(a_datetime, b_datetime) {
+  a_datetime = new Date(a_datetime);
+  b_datetime = new Date(b_datetime);
+  if (a_datetime < b_datetime) {
+    return -1;
+  } else if (a_datetime > b_datetime) {
+    return 1;
+  } else {
+    return 0;
+  }
 }
 
 /**
@@ -133,16 +60,16 @@ function compareDatetime(a_datetime, b_datetime){
  * @param {string} inputString String to be verified
  * @returns {string|null}
  */
-function processNull(inputString){
-    if (typeof inputString === 'string'){
-        if (inputString.length === 0 || inputString === 'NULL'){
-            return null;
-        } else {
-            return inputString;
-        }
+function processNull(inputString) {
+  if (typeof inputString === "string") {
+    if (inputString.length === 0 || inputString === "NULL") {
+      return null;
     } else {
-        return inputString;
+      return inputString;
     }
+  } else {
+    return inputString;
+  }
 }
 
 /**
@@ -151,11 +78,11 @@ function processNull(inputString){
  * @returns {string} text Cleaned text
  */
 function cleanUnicode(text) {
-    if (typeof text === 'string'){
-        return text.normalize('NFC');
-    } else {
-        return text;
-    }
+  if (typeof text === "string") {
+    return text.normalize("NFC");
+  } else {
+    return text;
+  }
 }
 
 /**
@@ -164,15 +91,15 @@ function cleanUnicode(text) {
  * @returns {string} text Cleaned text
  */
 function escapeString(text) {
-    return text
-        .replace(/[\\]/g, '\\\\')
-        .replace(/["]/g, '\\\"')
-        .replace(/[\/]/g, '\\/')
-        .replace(/[\b]/g, '\\b')
-        .replace(/[\f]/g, '\\f')
-        .replace(/[\n]/g, '\\n')
-        .replace(/[\r]/g, '\\r')
-        .replace(/[\t]/g, '\\t');
+  return text
+    .replace(/[\\]/g, "\\\\")
+    .replace(/["]/g, '\\"')
+    .replace(/[/]/g, "\\/")
+    .replace(/[\b]/g, "\\b")
+    .replace(/[\f]/g, "\\f")
+    .replace(/[\n]/g, "\\n")
+    .replace(/[\r]/g, "\\r")
+    .replace(/[\t]/g, "\\t");
 }
 
 /**
@@ -180,9 +107,9 @@ function escapeString(text) {
  * @param {Date} current_day
  * @returns {Date} nextDay
  */
-function getNextDay(current_day){
-    current_day.setDate(current_day.getDate() + 1);
-    return current_day;
+function getNextDay(current_day) {
+  current_day.setDate(current_day.getDate() + 1);
+  return current_day;
 }
 
 /**
@@ -192,12 +119,12 @@ function getNextDay(current_day){
  * @returns {number}
  */
 function getDayDiff(beginDate, endDate) {
-    let count = 0;
-    while ((endDate.getDate() - beginDate.getDate()) >= 1){
-        endDate.setDate(endDate.getDate() - 1);
-        count += 1
-    }
-    return count
+  let count = 0;
+  while (endDate.getDate() - beginDate.getDate() >= 1) {
+    endDate.setDate(endDate.getDate() - 1);
+    count += 1;
+  }
+  return count;
 }
 
 /**
@@ -207,17 +134,20 @@ function getDayDiff(beginDate, endDate) {
  * @returns {string} Id of the related element
  */
 function courseElementsFinder(eventlog, course_id) {
-    let elementsID = coucourseElementsFinder_string(eventlog['event_type'], course_id);
-    if (elementsID === '') {
-        elementsID = coucourseElementsFinder_string(eventlog['path'], course_id);
-    }
-    if (elementsID === '') {
-        elementsID = coucourseElementsFinder_string(eventlog['page'], course_id);
-    }
-    if (elementsID === '') {
-        elementsID = coucourseElementsFinder_string(eventlog['referer'], course_id);
-    }
-    return elementsID;
+  let elementsID = coucourseElementsFinder_string(
+    eventlog["event_type"],
+    course_id
+  );
+  if (elementsID === "") {
+    elementsID = coucourseElementsFinder_string(eventlog["path"], course_id);
+  }
+  if (elementsID === "") {
+    elementsID = coucourseElementsFinder_string(eventlog["page"], course_id);
+  }
+  if (elementsID === "") {
+    elementsID = coucourseElementsFinder_string(eventlog["referer"], course_id);
+  }
+  return elementsID;
 }
 
 /**
@@ -227,35 +157,43 @@ function courseElementsFinder(eventlog, course_id) {
  * @returns {string} Id of the related element
  */
 function coucourseElementsFinder_string(eventlog_item, course_id) {
-    let elementsID = '';
-    let courseId_filtered = course_id;
-    if (course_id.split(":").length > 1){
-        courseId_filtered = course_id.split(':')[1];
-    }
+  let elementsId = "";
+  let courseId_filtered = course_id;
+  if (course_id.split(":").length > 1) {
+    courseId_filtered = course_id.split(":")[1];
+  }
 
-    if (elementsID === '' && eventlog_item.includes('+type@') && eventlog_item.includes('block-v1:')) {
-        let templist = eventlog_item.split('/');
-        for (let tempstring of templist) {
-            if (tempstring.includes('+type@') && tempstring.includes('block-v1:')) {
-                elementsID = tempstring;
-            }
-        }
+  if (
+    elementsId === "" &&
+    eventlog_item.includes("+type@") &&
+    eventlog_item.includes("block-v1:")
+  ) {
+    let templist = eventlog_item.split("/");
+    for (let tempstring of templist) {
+      if (tempstring.includes("+type@") && tempstring.includes("block-v1:")) {
+        elementsId = tempstring;
+      }
     }
-    if (elementsID === '' && eventlog_item.includes('courseware/')) {
-        let templist = eventlog_item.split('/');
-        let tempflag = false;
-        for (let tempstring of templist) {
-            if (tempstring === 'courseware') {
-                tempflag = true;
-            } else {
-                if (tempflag === true && tempstring !== '') {
-                    elementsID = 'block-v1:' + courseId_filtered + '+type@chapter+block@' + tempstring;
-                    break;
-                }
-            }
+  }
+  if (elementsId === "" && eventlog_item.includes("courseware/")) {
+    let templist = eventlog_item.split("/");
+    let tempflag = false;
+    for (let tempstring of templist) {
+      if (tempstring === "courseware") {
+        tempflag = true;
+      } else {
+        if (tempflag === true && tempstring !== "") {
+          elementsId =
+            "block-v1:" +
+            courseId_filtered +
+            "+type@chapter+block@" +
+            tempstring;
+          break;
         }
+      }
     }
-    return elementsID;
+  }
+  return elementsId;
 }
 
 /**
@@ -264,29 +202,41 @@ function coucourseElementsFinder_string(eventlog_item, course_id) {
  * @returns {Object} oraInfo
  */
 function getORAEventTypeAndElement(fullEvent) {
-    let eventType = '',
-        element = '',
-        meta = false;
-    if (fullEvent['event_type'].includes('openassessmentblock')) {
-        eventType = fullEvent['event_type'];
-        eventType = eventType.slice(eventType.indexOf('.') + 1,);
-        element = fullEvent['context']['module']['usage_key'];
-        element = element.slice(element.lastIndexOf('@') + 1,);
-    }
-    if (fullEvent['event_type'].includes('openassessment+block')) {
-        eventType = fullEvent['event_type'];
-        eventType = eventType.slice(eventType.lastIndexOf('/') + 1, );
-        element = fullEvent['event_type'];
-        element = element.slice(element.lastIndexOf('@') + 1,);
-        element = element.slice(0, element.indexOf('/'));
-        meta = true;
-    }
-    let oraInfo = {
-        'eventType': eventType,
-        'element': element,
-        'meta': meta
-    };
-    return oraInfo
+  let eventType = "",
+    element = "",
+    meta = false;
+  if (fullEvent["event_type"].includes("openassessmentblock")) {
+    eventType = fullEvent["event_type"];
+    eventType = eventType.slice(eventType.indexOf(".") + 1);
+    element = fullEvent["context"]["module"]["usage_key"];
+    element = element.slice(element.lastIndexOf("@") + 1);
+  }
+  if (fullEvent["event_type"].includes("openassessment+block")) {
+    eventType = fullEvent["event_type"];
+    eventType = eventType.slice(eventType.lastIndexOf("/") + 1);
+    element = fullEvent["event_type"];
+    element = element.slice(element.lastIndexOf("@") + 1);
+    element = element.slice(0, element.indexOf("/"));
+    meta = true;
+  }
+  let oraInfo = {
+    eventType: eventType,
+    element: element,
+    meta: meta,
+  };
+  return oraInfo;
 }
 
-module.exports = {getDayDiff, getNextDay, getORAEventTypeAndElement, courseElementsFinder, coucourseElementsFinder_string, processNull, compareDatetime, cleanUnicode, escapeString, downloadForumSegmentation, learnerSegmentation, replaceAt, webdataJSON, downloadCsv, progressDisplay};
+module.exports = {
+  getDayDiff,
+  getNextDay,
+  getORAEventTypeAndElement,
+  courseElementsFinder,
+  coucourseElementsFinder_string,
+  processNull,
+  compareDatetime,
+  cleanUnicode,
+  escapeString,
+  learnerSegmentation,
+  replaceAt,
+};
